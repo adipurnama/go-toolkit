@@ -3,6 +3,7 @@ module github.com/adipurnama/go-toolkit
 go 1.14
 
 require (
+	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/go-playground/validator/v10 v10.2.0
 	github.com/golang/mock v1.4.3
 	github.com/jmoiron/sqlx v1.2.0
@@ -12,4 +13,5 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.4.0
 	go.opencensus.io v0.22.3
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )

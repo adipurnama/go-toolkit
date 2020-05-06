@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/adipurnama/go-toolkit/web"
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
 
@@ -13,6 +15,7 @@ func Request(req *http.Request) (echo.Context, *httptest.ResponseRecorder) {
 	rec := httptest.NewRecorder()
 
 	e := echo.New()
+	e.Validator = web.NewValidator(validator.New())
 	ctx := e.NewContext(req, rec)
 	return ctx, rec
 }
