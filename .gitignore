@@ -1,0 +1,7 @@
+prod.env
+staging.env
+out/
+test_coverage.*
+.vscode/
+.idea/
+app.yml
