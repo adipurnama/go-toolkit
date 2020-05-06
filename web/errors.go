@@ -32,14 +32,15 @@ func NewHTTPValidationError(err error) *HTTPError {
 	var fields []errorField
 	message := err.Error()
 
-	validationErrs := err.(validator.ValidationErrors)
-	if len(validationErrs) > 0 {
-		message = "field validation error(s) found"
-		for _, e := range validationErrs {
-			fields = append(fields, errorField{
-				Message: fmt.Sprintf("%s", e),
-				Field:   e.Field(),
-			})
+	if validationErrs, ok := err.(validator.ValidationErrors); ok {
+		if len(validationErrs) > 0 {
+			message = "field validation error(s) found"
+			for _, e := range validationErrs {
+				fields = append(fields, errorField{
+					Message: fmt.Sprintf("%s", e),
+					Field:   e.Field(),
+				})
+			}
 		}
 	}
 
