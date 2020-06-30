@@ -48,14 +48,17 @@ func RequestIDMiddleware() echo.MiddlewareFunc {
 // BodyDumpHandler logs incoming request & outgoing response body
 func BodyDumpHandler() middleware.BodyDumpHandler {
 	return func(ctx echo.Context, reqBody []byte, respBody []byte) {
+		event := log.InfoCtx(ctx.Request().Context())
+		if ctx.Response().Status < 200 && ctx.Response().Status >= 300 {
+			event = log.ErrorCtx(ctx.Request().Context())
+		}
 		// build log payload
-		event := log.InfoCtx(ctx.Request().Context()).
-			Str("http_method", ctx.Request().Method).
+		event = event.Str("http_method", ctx.Request().Method).
 			Str("http_path", mask.URL(ctx.Request().RequestURI)).
 			Int("http_status", ctx.Response().Status).
-			Str("http_request", mask.URL(string(reqBody)))
+			Str("http_request", string(reqBody))
 
 		// flush the log message
-		event.Str("http_response", mask.URL(string(respBody))).Msg("request completed")
+		event.Str("http_response", string(respBody)).Msg("request completed")
 	}
 }
