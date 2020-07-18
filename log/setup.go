@@ -67,19 +67,21 @@ func SetupWithLogfmtOutput(loc *time.Location) {
 		if !ok {
 			return "nok error"
 		}
+
 		t, err := time.Parse(time.RFC3339, ts)
 		if err != nil {
 			return "error"
 		}
+
 		t = t.In(loc)
+
 		return fmt.Sprintf("%d-%.2d-%.2d %.2d:%.2d:%.2d",
 			t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
 	}
 	zlog.Logger = zlog.Output(output)
-	// zlog.Logger = zlog.Output(output).With().Caller().Logger()
 }
 
-// SetGlobalLevel - set logging level
+// SetGlobalLevel - set logging level.
 func SetGlobalLevel(l Level) {
 	switch l {
 	case LevelPanic:

@@ -16,36 +16,41 @@ import (
 
 // Middlewares
 
-// RequestIDMiddleware - adds request ID for incoming http request
+// RequestIDMiddleware - adds request ID for incoming http request.
 func RequestIDMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-
 			// trace ID
 			tID := ctx.Request().Header.Get(web.HTTPKeyTraceID)
+
 			if tID == "" {
 				tID = uuid.NewV4().String()
 			}
+
 			ctx.Request().Header.Add(web.HTTPKeyTraceID, tID)
 			ctx.Response().Header().Set(web.HTTPKeyTraceID, tID)
 
 			// request ID
 			rID := ctx.Request().Header.Get(web.HTTPKeyRequestID)
+
 			if rID == "" {
 				rID = uuid.NewV4().String()
 			}
+
 			ctx.Request().Header.Add(web.HTTPKeyRequestID, rID)
 			ctx.Response().Header().Set(web.HTTPKeyRequestID, rID)
 
 			rCtx := context.WithValue(ctx.Request().Context(), web.ContextKeyRequestID, rID)
 			rCtx = context.WithValue(rCtx, web.ContextKeyTraceID, tID)
+
 			ctx.SetRequest(ctx.Request().WithContext(rCtx))
+
 			return next(ctx)
 		}
 	}
 }
 
-// BodyDumpHandler logs incoming request & outgoing response body
+// BodyDumpHandler logs incoming request & outgoing response body.
 func BodyDumpHandler() middleware.BodyDumpHandler {
 	return func(ctx echo.Context, reqBody []byte, respBody []byte) {
 		// build log payload

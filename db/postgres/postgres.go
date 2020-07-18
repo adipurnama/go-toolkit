@@ -8,7 +8,7 @@ import (
 )
 
 // NewPostgresDatabase - create & validate postgres connection given certain db.Option
-// the caller have the responsibility to close the *sqlx.DB when succeed
+// the caller have the responsibility to close the *sqlx.DB when succeed.
 func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 	db, err := sqlx.Open("postgres",
 		fmt.Sprintf("postgres://%s:%s@%s:%d/%s", opt.Username, opt.Password, opt.Host, opt.Port, opt.DatabaseName))

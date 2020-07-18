@@ -1,4 +1,4 @@
-package echokit
+package echokit_test
 
 import (
 	"errors"
@@ -6,8 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/adipurnama/go-toolkit/echokit"
 	"github.com/adipurnama/go-toolkit/web"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	errEmptyTraceID   = errors.New("trace ID should not be empty")
+	errEmptyRequestID = errors.New("request ID should not be empty")
 )
 
 func TestRequestIDMiddleware(t *testing.T) {
@@ -18,15 +24,15 @@ func TestRequestIDMiddleware(t *testing.T) {
 		checkerHandler := func(ctx echo.Context) error {
 			tID := ctx.Request().Header.Get(web.HTTPKeyTraceID)
 			if tID == "" {
-				return errors.New("trace ID should not be empty")
+				return errEmptyTraceID
 			}
 			rID := ctx.Request().Header.Get(web.HTTPKeyRequestID)
 			if rID == "" {
-				return errors.New("request ID should not be empty")
+				return errEmptyRequestID
 			}
 			return nil
 		}
-		mid := RequestIDMiddleware()
+		mid := echokit.RequestIDMiddleware()
 		handler := mid(checkerHandler)
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -43,15 +49,15 @@ func TestRequestIDMiddleware(t *testing.T) {
 		checkerHandler := func(ctx echo.Context) error {
 			tID := ctx.Request().Header.Get(web.HTTPKeyTraceID)
 			if tID != traceID {
-				return errors.New("trace ID doesn't match")
+				return errEmptyTraceID
 			}
 			rID := ctx.Request().Header.Get(web.HTTPKeyRequestID)
 			if rID != requestID {
-				return errors.New("request ID doesn't match")
+				return errEmptyRequestID
 			}
 			return nil
 		}
-		mid := RequestIDMiddleware()
+		mid := echokit.RequestIDMiddleware()
 		handler := mid(checkerHandler)
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

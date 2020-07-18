@@ -42,16 +42,19 @@ var headerMatches = []string{
 // which may be sensitive to performance degradations.
 var parameterMatcher = compileRegexpFromStrings(parameterMatches)
 
-// headerMatcher is precompiled for performance reasons, same as `parameterMatcher`
+// headerMatcher is precompiled for performance reasons, same as `parameterMatcher`.
 var headerMatcher = compileRegexpFromStrings(headerMatches)
 
 func compileRegexpFromStrings(paramNames []string) *regexp.Regexp {
 	var buffer bytes.Buffer
+
 	buffer.WriteString("(?i)")
+
 	for i, v := range paramNames {
 		if i > 0 {
 			buffer.WriteString("|")
 		}
+
 		buffer.WriteString(v)
 	}
 

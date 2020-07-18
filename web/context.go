@@ -14,7 +14,7 @@ var (
 	ContextKeyTraceID = ContextKey("traceID")
 )
 
-// ContextID is a struct which will be used as context key
+// ContextID is a struct which will be used as context key.
 type ContextID struct {
 	name string
 }
@@ -29,20 +29,23 @@ func ContextKey(name string) *ContextID {
 	return &ContextID{name: name}
 }
 
-// ValueFromContext returns string value for certain ContextID
+// ValueFromContext returns string value for certain ContextID.
 func ValueFromContext(ctx context.Context, key *ContextID) string {
 	if val, ok := ctx.Value(key).(string); ok {
 		return val
 	}
+
 	return ""
 }
 
 // HeaderFromContext - get header value from context
-// we set "header" key on context to set forwarded request context
+// we set "header" key on context to set forwarded request context.
 func HeaderFromContext(ctx context.Context) http.Header {
 	if val, ok := ctx.Value(ContextKeyHeader).(http.Header); ok {
 		return val
 	}
+
 	val := make(http.Header)
+
 	return val
 }

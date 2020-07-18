@@ -9,6 +9,7 @@ import (
 
 func main() {
 	log.SetupWithLogfmtOutput(time.UTC)
+
 	ctx := context.Background()
 
 	// log.DebugCtx(ctx).Stack().Caller().AnErr("error", definitelyError()).Msg("debug message with error")

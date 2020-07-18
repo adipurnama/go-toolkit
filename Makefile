@@ -6,12 +6,18 @@ ALL_PACKAGES := $(shell go list ./... | grep -v /vendor/ | grep -v /internal/moc
 GIT_COMMIT := $(shell git rev-list -1 HEAD)
 BUILD_TIME := $(shell date +%FT%T%z)
 
+NO_COLOR=\033[0m
+OK_COLOR=\033[32;01m
+ERROR_COLOR=\033[31;01m
+WARN_COLOR=\033[33;01m
+
 PHONY: fmt lint test run docker-image-push docker-image check-env generate
 fmt:
 	go fmt $(ALL_PACKAGES)
 
 lint:
-	env GO111MODULE=on golint -set_exit_status $(ALL_PACKAGES)
+	@echo -e "$(OK_COLOR)==> linting source files$(NO_COLOR)..."
+	@env golangci-lint run
 
 generate: fmt lint
 	go generate ./...

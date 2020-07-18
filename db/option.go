@@ -2,7 +2,7 @@ package db
 
 import "errors"
 
-// Option - database option
+// Option - database option.
 type Option struct {
 	Host         string
 	Port         int
@@ -11,11 +11,14 @@ type Option struct {
 	DatabaseName string
 }
 
-// NewDatabaseOption - default factory method
+var errInvalidDbSource = errors.New("invalid datasource host | port")
+
+// NewDatabaseOption - default factory method.
 func NewDatabaseOption(host string, port int, username, password, dbName string) (*Option, error) {
 	if host == "" || port == 0 {
-		return nil, errors.New("invalid datasource host | port")
+		return nil, errInvalidDbSource
 	}
+
 	return &Option{
 		Host:         host,
 		Port:         port,

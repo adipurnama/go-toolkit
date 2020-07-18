@@ -5,17 +5,17 @@ import (
 	"net/http"
 )
 
-// HTTPClient abstarcts away general http API Call
+// HTTPClient abstarcts away general http API Call.
 type HTTPClient interface {
 	Do(r *http.Request) (*http.Response, error)
 }
 
-// NewStdHTTPClient returns golang's default httpClient
+// NewStdHTTPClient returns golang's default httpClient.
 func NewStdHTTPClient() *http.Client {
 	return http.DefaultClient
 }
 
-// HTTPStatusError -
+// HTTPStatusError -.
 type HTTPStatusError struct {
 	Code int
 	Body []byte

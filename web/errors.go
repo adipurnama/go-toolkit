@@ -8,7 +8,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// HTTPError -
+// HTTPError -.
 type HTTPError struct {
 	Code       string       `json:"code"`
 	Message    string       `json:"message"`
@@ -27,19 +27,25 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("Error with HTTP StatusCode %d , payload : %s", e.StatusCode, string(b))
 }
 
-// NewHTTPValidationError - return new HTTPError caused by validation error
+// NewHTTPValidationError - return new HTTPError caused by validation error.
 func NewHTTPValidationError(err error) *HTTPError {
 	var fields []errorField
+
 	message := err.Error()
 
 	if validationErrs, ok := err.(validator.ValidationErrors); ok {
 		if len(validationErrs) > 0 {
-			message = "field validation error(s) found"
+			message = "field validation error found"
+
 			for _, e := range validationErrs {
 				fields = append(fields, errorField{
 					Message: fmt.Sprintf("%s", e),
 					Field:   e.Field(),
 				})
+			}
+
+			if len(fields) > 1 {
+				message = "field validation errors found"
 			}
 		}
 	}

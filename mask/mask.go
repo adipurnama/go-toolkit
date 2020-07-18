@@ -5,15 +5,15 @@ import (
 	"net/url"
 )
 
-// RedactionString represents the filtered value used in place of sensitive data in the mask package
+// RedactionString represents the filtered value used in place of sensitive data in the mask package.
 const RedactionString = "[FILTERED]"
 
-// IsSensitiveParam will return true if the given parameter name should be masked for sensitivity
+// IsSensitiveParam will return true if the given parameter name should be masked for sensitivity.
 func IsSensitiveParam(name string) bool {
 	return parameterMatcher.MatchString(name)
 }
 
-// IsSensitiveHeader will return true if the given parameter name should be masked for sensitivity
+// IsSensitiveHeader will return true if the given parameter name should be masked for sensitivity.
 func IsSensitiveHeader(name string) bool {
 	return headerMatcher.MatchString(name)
 }
@@ -50,6 +50,8 @@ func URL(originalURL string) string {
 			buf.Write(queryPart)
 		}
 	}
+
 	u.RawQuery = buf.String()
+
 	return u.String()
 }

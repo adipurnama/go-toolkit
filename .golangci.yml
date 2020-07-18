@@ -1,0 +1,21 @@
+linters:
+  enable:
+    - bodyclose
+    - deadcode
+    - wsl
+    - errcheck
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - interfacer
+    - goerr113
+    - misspell
+    - nakedret

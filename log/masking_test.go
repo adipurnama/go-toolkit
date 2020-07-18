@@ -1,7 +1,9 @@
-package log
+package log_test
 
 import (
 	"testing"
+
+	"github.com/adipurnama/go-toolkit/log"
 )
 
 func TestMaskPartial(t *testing.T) {
@@ -33,7 +35,7 @@ func TestMaskPartial(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MaskPartial(tt.args); got != tt.want {
+			if got := log.MaskPartial(tt.args); got != tt.want {
 				t.Errorf("MaskPartial() = %v, want %v", got, tt.want)
 			}
 		})
@@ -59,7 +61,7 @@ func TestMask(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Mask(tt.s); got != tt.want {
+			if got := log.Mask(tt.s); got != tt.want {
 				t.Errorf("Mask() = %v, want %v", got, tt.want)
 			}
 		})

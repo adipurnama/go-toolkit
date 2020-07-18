@@ -1,9 +1,10 @@
-package mask
+package mask_test
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/adipurnama/go-toolkit/mask"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,16 +52,16 @@ func TestIsSensitiveParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			check := func(v string) {
 				// Normal case
-				gotWhole := IsSensitiveParam(v)
+				gotWhole := mask.IsSensitiveParam(v)
 				require.Equal(t, tt.want&whole != 0, gotWhole, "Whole param match on '%s'", v)
 
-				gotMiddle := IsSensitiveParam("prefix" + v + "suffix")
+				gotMiddle := mask.IsSensitiveParam("prefix" + v + "suffix")
 				require.Equal(t, tt.want&inMiddle != 0, gotMiddle, "Middle match on '%s'", "prefix"+v+"suffix")
 
-				gotStart := IsSensitiveParam(v + "suffix")
+				gotStart := mask.IsSensitiveParam(v + "suffix")
 				require.Equal(t, tt.want&atStart != 0, gotStart, "Start match on '%s'", v+"suffix")
 
-				gotEnd := IsSensitiveParam("prefix" + v)
+				gotEnd := mask.IsSensitiveParam("prefix" + v)
 				require.Equal(t, tt.want&atEnd != 0, gotEnd, "End match on '%s'", "prefix"+v)
 			}
 
@@ -89,16 +90,16 @@ func TestIsSensitiveHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := func(v string) {
-				gotWhole := IsSensitiveHeader(v)
+				gotWhole := mask.IsSensitiveHeader(v)
 				require.Equal(t, tt.want&whole != 0, gotWhole, "Whole param match on '%s'", v)
 
-				gotMiddle := IsSensitiveHeader("prefix" + v + "suffix")
+				gotMiddle := mask.IsSensitiveHeader("prefix" + v + "suffix")
 				require.Equal(t, tt.want&inMiddle != 0, gotMiddle, "Middle match on '%s'", "prefix"+v+"suffix")
 
-				gotStart := IsSensitiveHeader(v + "suffix")
+				gotStart := mask.IsSensitiveHeader(v + "suffix")
 				require.Equal(t, tt.want&atStart != 0, gotStart, "Start match on '%s'", v+"suffix")
 
-				gotEnd := IsSensitiveHeader("prefix" + v)
+				gotEnd := mask.IsSensitiveHeader("prefix" + v)
 				require.Equal(t, tt.want&atEnd != 0, gotEnd, "End match on '%s'", "prefix"+v)
 			}
 
@@ -111,7 +112,7 @@ func TestIsSensitiveHeader(t *testing.T) {
 
 func BenchmarkURL(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		URL(`http://localhost:8000?token=123&something_else=92384&secret=sdmalaksjdasd&hook=123901283019238&trace=12312312312123`)
+		mask.URL(`http://localhost:8000?token=123&something_else=92384&secret=sdmalaksjdasd&hook=123901283019238&trace=12312312312123`)
 	}
 }
 
@@ -163,7 +164,7 @@ func TestURL(t *testing.T) {
 
 	for url, want := range tests {
 		t.Run(url, func(t *testing.T) {
-			got := URL(url)
+			got := mask.URL(url)
 			require.Equal(t, want, got)
 		})
 	}
