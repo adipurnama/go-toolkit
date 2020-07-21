@@ -2,99 +2,118 @@ package log
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-type (
-	// Level - log level
-	Level int
-)
+// NewLogger logger.
+// If static fields are provided those values will define
+// the default static fields for each new built instance
+// if they were not yet configured.
+func NewLogger(level int, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
+	if level < Disabled || level > LevelError {
+		level = LevelInfo
+	}
 
-const (
-	// LevelPanic - log Panic
-	LevelPanic Level = iota + 1
+	var (
+		stdWriter io.Writer
+		errWriter io.Writer
+	)
 
-	// LevelFatal - log Fatal
-	LevelFatal
+	if fileLogger != nil {
+		stdWriter = io.MultiWriter(os.Stdout, fileLogger)
+		errWriter = io.MultiWriter(os.Stderr, fileLogger)
+	} else {
+		stdWriter = os.Stdout
+		errWriter = os.Stderr
+	}
 
-	// LevelError - log Error
-	LevelError
+	stdl := log.Output(stdWriter).With().Timestamp().Logger()
+	errl := log.Output(errWriter).With().Timestamp().Logger()
 
-	// LevelDebug - log Debug
-	LevelDebug
+	setLogLevel(&stdl, level)
+	setLogLevel(&errl, level)
 
-	// LevelWarn - log Warning
-	LevelWarn
+	l := &Logger{
+		Level:  level,
+		StdLog: stdl,
+		ErrLog: errl,
+	}
 
-	// LevelInfo - log Info
-	LevelInfo
-)
+	if len(stfields) > 1 && !cfg.configured {
+		// if !cfg.configured {
+		setup(name, fileLogger, false, stfields)
 
-/*
-SetupWithLogfmtOutput will setup global logger with logfmt output (https://www.brandur.org/logfmt)
-example: 2019-07-23 10:57:18  INFO   **request completed** method=POST path=/cached-member-data
-*/
-func SetupWithLogfmtOutput(loc *time.Location) {
-	output := zerolog.ConsoleWriter{Out: os.Stdout}
+		defaultLogger = l
+	}
+
+	return l
+}
+
+// NewDevLogger logger.
+// Pretty logging for development mode.
+// Not recommended for production use.
+// If static fields are provided those values will define
+// the default static fields for each new built instance
+// if they were not yet configured.
+func NewDevLogger(level int, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
+	if level < Disabled || level > LevelError {
+		level = LevelInfo
+	}
+
+	var output zerolog.ConsoleWriter
+
+	if fileLogger != nil {
+		multiWriter := io.MultiWriter(os.Stdout, fileLogger)
+		output = zerolog.ConsoleWriter{Out: multiWriter, TimeFormat: time.RFC3339}
+	} else {
+		output = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
+	}
+
 	output.FormatLevel = func(i interface{}) string {
-		return strings.ToUpper(fmt.Sprintf(" %-6s", i))
+		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 	}
 	output.FormatMessage = func(i interface{}) string {
-		return fmt.Sprintf("**%s**", i)
+		return fmt.Sprintf("** %s **", i)
 	}
 	output.FormatFieldName = func(i interface{}) string {
 		return fmt.Sprintf("%s=", i)
 	}
+	output.FormatErrFieldValue = func(i interface{}) string {
+		if e, ok := i.(error); ok {
+			return e.Error()
+		}
+
+		return fmt.Sprintf("%s", i)
+	}
 	output.FormatErrFieldName = func(i interface{}) string {
 		return "error="
 	}
-	output.FormatErrFieldValue = func(i interface{}) string {
-		return fmt.Sprintf("%+v", i)
-	}
-	output.FormatFieldValue = func(i interface{}) string {
-		return fmt.Sprintf("%s", i)
-	}
-	// output.FormatCaller = func(i interface{}) string {
-	// 	return fmt.Sprintf("caller=%v", i)
-	// }
-	output.FormatTimestamp = func(i interface{}) string {
-		ts, ok := i.(string)
-		if !ok {
-			return "nok error"
-		}
 
-		t, err := time.Parse(time.RFC3339, ts)
-		if err != nil {
-			return "error"
-		}
+	stdl := zerolog.New(output).With().Timestamp().Stack().Logger()
+	errl := zerolog.New(output).With().Timestamp().Stack().Logger()
 
-		t = t.In(loc)
+	setLogLevel(&stdl, level)
+	setLogLevel(&errl, level)
 
-		return fmt.Sprintf("%d-%.2d-%.2d %.2d:%.2d:%.2d",
-			t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+	l := &Logger{
+		Level:  level,
+		StdLog: stdl,
+		ErrLog: errl,
 	}
-	zlog.Logger = zlog.Output(output)
-}
 
-// SetGlobalLevel - set logging level.
-func SetGlobalLevel(l Level) {
-	switch l {
-	case LevelPanic:
-		zerolog.SetGlobalLevel(zerolog.PanicLevel)
-	case LevelFatal:
-		zerolog.SetGlobalLevel(zerolog.FatalLevel)
-	case LevelError:
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	case LevelDebug:
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case LevelWarn:
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	case LevelInfo:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	// if len(stfields) > 1 && !cfg.configured {
+	if !cfg.configured {
+		setup(name, fileLogger, true, stfields)
+
+		defaultLogger = l
 	}
+
+	return l
 }

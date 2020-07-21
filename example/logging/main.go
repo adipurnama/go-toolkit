@@ -2,21 +2,21 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/adipurnama/go-toolkit/log"
 )
 
 func main() {
-	log.SetupWithLogfmtOutput(time.UTC)
+	_ = log.NewDevLogger(log.LevelDebug, "sample-logger", nil, "example", true).Set()
 
 	ctx := context.Background()
+	logger := log.FromCtx(ctx)
+	logger.AddField("my_field", "custom")
+	ctx = log.NewContextLogger(ctx, logger)
 
-	// log.DebugCtx(ctx).Stack().Caller().AnErr("error", definitelyError()).Msg("debug message with error")
-	// log.DebugCtx(ctx).Err(definitelyError()).Str("field_here", "whatever").Msg("debug message")
-	log.DebugCtx(ctx).Str("field_here", "whatever").Msg("debug message - no error")
+	log.FromCtx(ctx).Info("debug message - no error", "field_here", "whatever")
 
-	// log.Debug().Stack().Caller().Err(definitelyError()).Msg("debug message with error")
-	log.Debug().Err(definitelyError()).Str("field_here", "whatever").Msg("debug message")
-	log.Debug().Str("field_here", "whatever").Msg("debug message - no error")
+	log.FromCtx(ctx).Error(definitelyError(), "debug message", "field_here", "whatever")
+
+	log.FromCtx(ctx).Info("debug message - no error", "field_here", "whatever")
 }

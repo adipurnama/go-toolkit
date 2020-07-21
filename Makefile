@@ -13,11 +13,13 @@ WARN_COLOR=\033[33;01m
 
 PHONY: fmt lint test run docker-image-push docker-image check-env generate
 fmt:
-	go fmt $(ALL_PACKAGES)
+	@echo -e "$(OK_COLOR)==> formatting code$(NO_COLOR)..."
+	@go fmt $(ALL_PACKAGES)
 
-lint:
+lint: fmt
 	@echo -e "$(OK_COLOR)==> linting source files$(NO_COLOR)..."
 	@env golangci-lint run
+	@echo -e "$(OK_COLOR)==> all is good$(NO_COLOR)..."
 
 generate: fmt lint
 	go generate ./...

@@ -32,7 +32,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			}
 			return nil
 		}
-		mid := echokit.RequestIDMiddleware()
+		mid := echokit.RequestIDLoggerMiddleware()
 		handler := mid(checkerHandler)
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -57,7 +57,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			}
 			return nil
 		}
-		mid := echokit.RequestIDMiddleware()
+		mid := echokit.RequestIDLoggerMiddleware()
 		handler := mid(checkerHandler)
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

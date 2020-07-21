@@ -1,48 +1,50 @@
 package echokit
 
 import (
-	"context"
-
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/adipurnama/go-toolkit/mask"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/adipurnama/go-toolkit/web"
 
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/labstack/echo/v4"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Middlewares
 
-// RequestIDMiddleware - adds request ID for incoming http request.
-func RequestIDMiddleware() echo.MiddlewareFunc {
+// RequestIDLoggerMiddleware - adds request ID for incoming http request.
+// it also set request with new context with logger
+// it's useful when you want to using log package with requestID
+func RequestIDLoggerMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
+			logger := log.FromCtx(ctx.Request().Context())
+
 			// trace ID
 			tID := ctx.Request().Header.Get(web.HTTPKeyTraceID)
 
 			if tID == "" {
 				tID = uuid.NewV4().String()
+				ctx.Request().Header.Add(web.HTTPKeyTraceID, tID)
 			}
 
-			ctx.Request().Header.Add(web.HTTPKeyTraceID, tID)
 			ctx.Response().Header().Set(web.HTTPKeyTraceID, tID)
+			logger.AddField("trace_id", web.ContextKeyTraceID)
 
 			// request ID
 			rID := ctx.Request().Header.Get(web.HTTPKeyRequestID)
 
 			if rID == "" {
 				rID = uuid.NewV4().String()
+				ctx.Request().Header.Add(web.HTTPKeyRequestID, rID)
 			}
 
-			ctx.Request().Header.Add(web.HTTPKeyRequestID, rID)
 			ctx.Response().Header().Set(web.HTTPKeyRequestID, rID)
+			logger.AddField("request_id", web.HTTPKeyRequestID)
 
-			rCtx := context.WithValue(ctx.Request().Context(), web.ContextKeyRequestID, rID)
-			rCtx = context.WithValue(rCtx, web.ContextKeyTraceID, tID)
-
+			rCtx := log.NewContextLogger(ctx.Request().Context(), logger)
 			ctx.SetRequest(ctx.Request().WithContext(rCtx))
 
 			return next(ctx)
@@ -53,14 +55,13 @@ func RequestIDMiddleware() echo.MiddlewareFunc {
 // BodyDumpHandler logs incoming request & outgoing response body.
 func BodyDumpHandler() middleware.BodyDumpHandler {
 	return func(ctx echo.Context, reqBody []byte, respBody []byte) {
-		// build log payload
-		event := log.InfoCtx(ctx.Request().Context()).
-			Str("http_method", ctx.Request().Method).
-			Str("http_path", mask.URL(ctx.Request().RequestURI)).
-			Int("http_status", ctx.Response().Status).
-			Str("http_request", mask.URL(string(reqBody)))
-
-		// flush the log message
-		event.Str("http_response", mask.URL(string(respBody))).Msg("request completed")
+		log.FromCtx(ctx.Request().Context()).Info(
+			"request completed",
+			"http_method", ctx.Request().Method,
+			"http_path", mask.URL(ctx.Request().RequestURI),
+			"http_status", ctx.Response().Status,
+			"http_request", mask.URL(string(reqBody)),
+			"http_response", mask.URL(string(respBody)),
+		)
 	}
 }

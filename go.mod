@@ -14,4 +14,5 @@ require (
 	github.com/stretchr/testify v1.4.0
 	go.opencensus.io v0.22.3
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
