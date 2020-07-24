@@ -34,8 +34,16 @@ func NewLogger(level int, name string, fileLogger *lumberjack.Logger, stfields .
 		errWriter = os.Stderr
 	}
 
-	stdl := log.Output(stdWriter).With().Timestamp().Logger()
-	errl := log.Output(errWriter).With().Timestamp().Logger()
+	stdl := log.Output(stdWriter).With().
+		Timestamp().
+		CallerWithSkipFrameCount(4).
+		Stack().
+		Logger()
+	errl := log.Output(errWriter).With().
+		Timestamp().
+		CallerWithSkipFrameCount(4).
+		Stack().
+		Logger()
 
 	setLogLevel(&stdl, level)
 	setLogLevel(&errl, level)
@@ -80,7 +88,7 @@ func NewDevLogger(level int, name string, fileLogger *lumberjack.Logger, stfield
 		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 	}
 	output.FormatMessage = func(i interface{}) string {
-		return fmt.Sprintf("** %s **", i)
+		return fmt.Sprintf("%s |", i)
 	}
 	output.FormatFieldName = func(i interface{}) string {
 		return fmt.Sprintf("%s=", i)
@@ -95,9 +103,34 @@ func NewDevLogger(level int, name string, fileLogger *lumberjack.Logger, stfield
 	output.FormatErrFieldName = func(i interface{}) string {
 		return "error="
 	}
+	output.FormatCaller = func(i interface{}) string {
+		var c string
 
-	stdl := zerolog.New(output).With().Timestamp().Stack().Logger()
-	errl := zerolog.New(output).With().Timestamp().Stack().Logger()
+		if cc, ok := i.(string); ok {
+			c = cc
+		}
+
+		if len(c) > 0 {
+			cwd, err := os.Getwd()
+			if err == nil {
+				c = strings.TrimPrefix(c, cwd)
+				c = strings.TrimPrefix(c, "/")
+			}
+		}
+
+		return fmt.Sprintf("%s |", c)
+	}
+
+	stdl := zerolog.New(output).With().
+		Timestamp().
+		CallerWithSkipFrameCount(4).
+		Stack().
+		Logger()
+	errl := zerolog.New(output).With().
+		Timestamp().
+		CallerWithSkipFrameCount(4).
+		Stack().
+		Logger()
 
 	setLogLevel(&stdl, level)
 	setLogLevel(&errl, level)

@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 
+	"github.com/adipurnama/go-toolkit/example/logging/helper"
 	"github.com/adipurnama/go-toolkit/log"
 )
 
 func main() {
+	// _ = log.NewLogger(log.LevelDebug, "sample-prod-logger", nil, "custom", "value").Set()
 	_ = log.NewDevLogger(log.LevelDebug, "sample-logger", nil, "example", true).Set()
 
 	ctx := context.Background()
@@ -16,7 +18,7 @@ func main() {
 
 	log.FromCtx(ctx).Info("debug message - no error", "field_here", "whatever")
 
-	log.FromCtx(ctx).Error(definitelyError(), "debug message", "field_here", "whatever")
+	log.FromCtx(ctx).Error(helper.DefinitelyError(), "debug message", "field_here", "whatever")
 
 	log.FromCtx(ctx).Info("debug message - no error", "field_here", "whatever")
 }
