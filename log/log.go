@@ -24,6 +24,9 @@ var (
 )
 
 func init() {
+	// Enable line numbers in logging
+	stdLog.SetFlags(stdLog.LstdFlags | stdLog.Lshortfile)
+
 	defaultLogger = NewLogger(LevelDebug, "logger", nil)
 }
 
@@ -166,26 +169,6 @@ func FromCtx(ctx context.Context) *Logger {
 	}
 
 	return l
-}
-
-// Debug logs debug messages.
-func Debug(msg string, meta ...interface{}) {
-	defaultLogger.Debug(msg, meta...)
-}
-
-// Info logs info messages.
-func Info(msg string, meta ...interface{}) {
-	defaultLogger.Info(msg, meta...)
-}
-
-// Warn logs warning messages.
-func Warn(msg string, meta ...interface{}) {
-	defaultLogger.Warn(msg, meta...)
-}
-
-// Error logs error messages.
-func Error(err error, msg string, meta ...interface{}) {
-	defaultLogger.Error(err, msg, meta...)
 }
 
 // Debug logs debug messages.
@@ -344,44 +327,33 @@ func setLogLevel(l *zerolog.Logger, level int) {
 // Print calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Print.
 func Print(v ...interface{}) {
-	fmt.Print(v...)
+	_ = stdLog.Output(2, fmt.Sprint(v...))
 }
 
 // Printf calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
 func Printf(format string, v ...interface{}) {
-	stdLog.Printf(format, v...)
+	_ = stdLog.Output(2, fmt.Sprintf(format+"\n", v...))
 }
 
 // Println calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Println.
 func Println(v ...interface{}) {
-	stdLog.Println(v...)
+	_ = stdLog.Output(2, fmt.Sprintln(v...))
 }
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
 func Fatal(v ...interface{}) {
-	stdLog.Fatal(v...)
+	_ = stdLog.Output(2, fmt.Sprintln(v...))
+
+	os.Exit(1)
 }
 
 // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 func Fatalf(format string, v ...interface{}) {
-	stdLog.Fatalf(format, v...)
-}
+	_ = stdLog.Output(2, fmt.Sprintf(format+"\n", v...))
 
-// Panic is equivalent to Print() followed by a call to panic().
-func Panic(v ...interface{}) {
-	stdLog.Panic(v...)
-}
-
-// Panicln is equivalent to Println() followed by a call to panic().
-func Panicln(v ...interface{}) {
-	stdLog.Panicln(v...)
-}
-
-// Panicf is equivalent to Printf() followed by a call to panic().
-func Panicf(format string, v ...interface{}) {
-	stdLog.Panicf(format, v...)
+	os.Exit(1)
 }
 
 // OnErrorFuncf execute function f with possible error return.

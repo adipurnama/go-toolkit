@@ -2,11 +2,11 @@ package postgres
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"time"
 
 	"github.com/adipurnama/go-toolkit/db"
-	"github.com/adipurnama/go-toolkit/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -39,7 +39,7 @@ func doKeepAliveConnection(db *sqlx.DB, interval time.Duration) {
 	for {
 		rows, err := db.Query("SELECT 1")
 		if err != nil {
-			log.Error(err, "db.doKeepAliveConnection", "conn", "postgres")
+			log.Printf("db.doKeepAliveConnection conn=postgres error=%s\n", err)
 			return
 		}
 
@@ -47,7 +47,7 @@ func doKeepAliveConnection(db *sqlx.DB, interval time.Duration) {
 			var i int
 
 			_ = rows.Scan(&i)
-			log.Info("db.doKeepAliveConnection", "counter", i, "stats", db.Stats())
+			log.Printf("db.doKeepAliveConnection counter=%d stats=%v\n", i, db.Stats())
 		}
 
 		_ = rows.Close()

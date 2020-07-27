@@ -2,7 +2,7 @@ pre-commit:
   commands:
     lint-check:
       glob: "*.{go}"
-      run: env GO111MODULE=on golint -set_exit_status $(go list ./... | grep -v /vendor/ | grep -v /internal/mock)
+      run: make lint
     unit-tests:
       glob: "*.{go}"
       run: go test $(go list ./... | grep -v /vendor/)

@@ -103,6 +103,9 @@ func NewDevLogger(level int, name string, fileLogger *lumberjack.Logger, stfield
 	output.FormatErrFieldName = func(i interface{}) string {
 		return "error="
 	}
+	output.FormatTimestamp = func(i interface{}) string {
+		return fmt.Sprintf("%s", i)
+	}
 	output.FormatCaller = func(i interface{}) string {
 		var c string
 
