@@ -5,6 +5,8 @@ import (
 	"fmt"
 	stdLog "log"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -24,9 +26,6 @@ var (
 )
 
 func init() {
-	// Enable line numbers in logging
-	stdLog.SetFlags(stdLog.LstdFlags | stdLog.Lshortfile)
-
 	defaultLogger = NewLogger(LevelDebug, "logger", nil)
 }
 
@@ -327,23 +326,43 @@ func setLogLevel(l *zerolog.Logger, level int) {
 // Print calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Print.
 func Print(v ...interface{}) {
+	if fileFmt, ok := fileLineLogFmt("INFO"); ok {
+		stdLog.Print(fileFmt + fmt.Sprint(v...))
+		return
+	}
+
 	_ = stdLog.Output(2, fmt.Sprint(v...))
 }
 
 // Printf calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
 func Printf(format string, v ...interface{}) {
+	if fileFmt, ok := fileLineLogFmt("INFO"); ok {
+		stdLog.Printf(fileFmt+format, v...)
+		return
+	}
+
 	_ = stdLog.Output(2, fmt.Sprintf(format+"\n", v...))
 }
 
 // Println calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Println.
 func Println(v ...interface{}) {
+	if fileFmt, ok := fileLineLogFmt("INFO"); ok {
+		stdLog.Printf(fileFmt + fmt.Sprintln(v...))
+		return
+	}
+
 	_ = stdLog.Output(2, fmt.Sprintln(v...))
 }
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
 func Fatal(v ...interface{}) {
+	if fileFmt, ok := fileLineLogFmt("ERROR"); ok {
+		stdLog.Fatal(fileFmt + fmt.Sprintln(v...))
+		return
+	}
+
 	_ = stdLog.Output(2, fmt.Sprintln(v...))
 
 	os.Exit(1)
@@ -351,9 +370,33 @@ func Fatal(v ...interface{}) {
 
 // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 func Fatalf(format string, v ...interface{}) {
+	if fileFmt, ok := fileLineLogFmt("ERROR"); ok {
+		stdLog.Fatalf(fileFmt+format+"\n", v...)
+		return
+	}
+
 	_ = stdLog.Output(2, fmt.Sprintf(format+"\n", v...))
 
 	os.Exit(1)
+}
+
+// helper function to get caller file & line number info
+// returns formatted string ` | $LEVEL | dir/file:line | `
+func fileLineLogFmt(level string) (string, bool) {
+	_, file, line, ok := runtime.Caller(3)
+	if ok {
+		result := fmt.Sprintf("%s:%d", file, line)
+
+		cwd, err := os.Getwd()
+		if err == nil {
+			result = strings.TrimPrefix(result, cwd)
+			result = strings.TrimPrefix(result, "/")
+		}
+
+		return fmt.Sprintf(" | %s | %s | ", level, result), true
+	}
+
+	return "", false
 }
 
 // OnErrorFuncf execute function f with possible error return.
