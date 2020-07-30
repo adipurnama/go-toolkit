@@ -1,16 +1,22 @@
 package log
 
+// Level is log output level
+type Level int
+
 const (
-	// Disabled level
-	Disabled = -1
+	// LevelDisabled level
+	LevelDisabled Level = -1
 	// LevelDebug level
-	LevelDebug = iota
+	LevelDebug Level = 0
 	// LevelInfo level
-	LevelInfo
+	LevelInfo Level = 1
 	// LevelWarn level
-	LevelWarn
+	LevelWarn Level = 2
 	// LevelError level
-	LevelError
+	LevelError Level = 3
+
+	cfgSkipCallerCount              = 4
+	cfgDefaultStdLogSkipCallerCount = 2
 )
 
 var (

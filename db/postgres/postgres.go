@@ -1,3 +1,4 @@
+// Package postgres provide faktory method for postgres db.Option
 package postgres
 
 import (
@@ -9,6 +10,8 @@ import (
 	"github.com/adipurnama/go-toolkit/db"
 	"github.com/jmoiron/sqlx"
 )
+
+var intervalKeepAlive = 5 * time.Second
 
 // NewPostgresDatabase - create & validate postgres connection given certain db.Option
 // the caller have the responsibility to close the *sqlx.DB when succeed.
@@ -30,7 +33,7 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 
 	_ = db.QueryRow("SELECT 1")
 
-	go doKeepAliveConnection(db, 5*time.Second)
+	go doKeepAliveConnection(db, intervalKeepAlive)
 
 	return db, nil
 }

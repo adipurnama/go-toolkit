@@ -1,3 +1,4 @@
+// Package log provide log interface to logging library
 package log
 
 import (
@@ -32,7 +33,7 @@ func init() {
 // Logger is structured leveled logger
 type Logger struct {
 	// Level of min logging
-	Level int
+	Level Level
 	// Version
 	Version string
 	// Revision
@@ -49,7 +50,7 @@ type config struct {
 	// Name
 	name string
 	// Level of min logging
-	level int
+	level Level
 	// Static fields
 	stfields []interface{}
 	// configured
@@ -110,16 +111,16 @@ func (l *Logger) ResetFields() {
 }
 
 // GetLevelFromString return error level based on config string
-func GetLevelFromString(level string) int {
+func GetLevelFromString(level string) Level {
 	switch level {
 	case "info":
 		return LevelInfo
 	case "warn":
 		return LevelWarn
-	case "debug":
-		return LevelDebug
-	default:
+	case "error":
 		return LevelError
+	default:
+		return LevelDebug
 	}
 }
 
@@ -289,7 +290,7 @@ func stringify(val interface{}) string {
 }
 
 // UpdateLogLevel updates log level.
-func (l Logger) UpdateLogLevel(level int) {
+func (l Logger) UpdateLogLevel(level Level) {
 	// Allow info level to log the update
 	// But don't downgrade to it if Error is set.
 	current := LevelError
@@ -297,24 +298,24 @@ func (l Logger) UpdateLogLevel(level int) {
 	l.Info("Log level updated", "", "log level", level)
 
 	l.Level = current
-	if level < Disabled || level > LevelError {
+	if level < LevelDisabled || level > LevelError {
 		l.Level = level
 		setLogLevel(&l.StdLog, level)
 		setLogLevel(&l.ErrLog, level)
 	}
 }
 
-func setLogLevel(l *zerolog.Logger, level int) {
+func setLogLevel(l *zerolog.Logger, level Level) {
 	switch level {
-	case -1:
+	case LevelDisabled:
 		l.Level(zerolog.Disabled)
-	case 0:
+	case LevelDebug:
 		l.Level(zerolog.DebugLevel)
-	case 1:
+	case LevelInfo:
 		l.Level(zerolog.InfoLevel)
-	case 2:
+	case LevelWarn:
 		l.Level(zerolog.WarnLevel)
-	case 3:
+	case LevelError:
 		l.Level(zerolog.ErrorLevel)
 	default:
 		l.Level(zerolog.DebugLevel)
@@ -331,7 +332,7 @@ func Print(v ...interface{}) {
 		return
 	}
 
-	_ = stdLog.Output(2, fmt.Sprint(v...))
+	_ = stdLog.Output(cfgDefaultStdLogSkipCallerCount, fmt.Sprint(v...))
 }
 
 // Printf calls Output to print to the standard logger.
@@ -342,7 +343,7 @@ func Printf(format string, v ...interface{}) {
 		return
 	}
 
-	_ = stdLog.Output(2, fmt.Sprintf(format+"\n", v...))
+	_ = stdLog.Output(cfgDefaultStdLogSkipCallerCount, fmt.Sprintf(format+"\n", v...))
 }
 
 // Println calls Output to print to the standard logger.
@@ -353,7 +354,7 @@ func Println(v ...interface{}) {
 		return
 	}
 
-	_ = stdLog.Output(2, fmt.Sprintln(v...))
+	_ = stdLog.Output(cfgDefaultStdLogSkipCallerCount, fmt.Sprintln(v...))
 }
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
@@ -363,7 +364,7 @@ func Fatal(v ...interface{}) {
 		return
 	}
 
-	_ = stdLog.Output(2, fmt.Sprintln(v...))
+	_ = stdLog.Output(cfgDefaultStdLogSkipCallerCount, fmt.Sprintln(v...))
 
 	os.Exit(1)
 }
@@ -375,7 +376,7 @@ func Fatalf(format string, v ...interface{}) {
 		return
 	}
 
-	_ = stdLog.Output(2, fmt.Sprintf(format+"\n", v...))
+	_ = stdLog.Output(cfgDefaultStdLogSkipCallerCount, fmt.Sprintf(format+"\n", v...))
 
 	os.Exit(1)
 }
@@ -383,7 +384,9 @@ func Fatalf(format string, v ...interface{}) {
 // helper function to get caller file & line number info
 // returns formatted string ` | $LEVEL | dir/file:line | `
 func fileLineLogFmt(level string) (string, bool) {
-	_, file, line, ok := runtime.Caller(3)
+	skip := 3
+
+	_, file, line, ok := runtime.Caller(skip)
 	if ok {
 		result := fmt.Sprintf("%s:%d", file, line)
 

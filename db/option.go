@@ -1,3 +1,4 @@
+// Package db for interacting with database
 package db
 
 import "errors"
@@ -11,12 +12,12 @@ type Option struct {
 	DatabaseName string
 }
 
-var errInvalidDbSource = errors.New("invalid datasource host | port")
+var errInvalidDBSource = errors.New("invalid datasource host | port")
 
 // NewDatabaseOption - default factory method.
 func NewDatabaseOption(host string, port int, username, password, dbName string) (*Option, error) {
 	if host == "" || port == 0 {
-		return nil, errInvalidDbSource
+		return nil, errInvalidDBSource
 	}
 
 	return &Option{

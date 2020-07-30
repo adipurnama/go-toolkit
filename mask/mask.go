@@ -30,14 +30,16 @@ func URL(originalURL string) string {
 	redactionBytes := []byte(RedactionString)
 	buf := bytes.NewBuffer(make([]byte, 0, len(originalURL)))
 
+	paramSplitN := 2
+
 	for i, queryPart := range bytes.Split([]byte(u.RawQuery), []byte("&")) {
 		if i != 0 {
 			buf.WriteByte('&')
 		}
 
-		splitParam := bytes.SplitN(queryPart, []byte("="), 2)
+		splitParam := bytes.SplitN(queryPart, []byte("="), paramSplitN)
 
-		if len(splitParam) == 2 {
+		if len(splitParam) == paramSplitN {
 			buf.Write(splitParam[0])
 			buf.WriteByte('=')
 

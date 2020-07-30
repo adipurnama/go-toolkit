@@ -16,8 +16,8 @@ import (
 // If static fields are provided those values will define
 // the default static fields for each new built instance
 // if they were not yet configured.
-func NewLogger(level int, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
-	if level < Disabled || level > LevelError {
+func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
+	if level < LevelDisabled || level > LevelError {
 		level = LevelInfo
 	}
 
@@ -36,12 +36,12 @@ func NewLogger(level int, name string, fileLogger *lumberjack.Logger, stfields .
 
 	stdl := log.Output(stdWriter).With().
 		Timestamp().
-		CallerWithSkipFrameCount(4).
+		CallerWithSkipFrameCount(cfgSkipCallerCount).
 		Stack().
 		Logger()
 	errl := log.Output(errWriter).With().
 		Timestamp().
-		CallerWithSkipFrameCount(4).
+		CallerWithSkipFrameCount(cfgSkipCallerCount).
 		Stack().
 		Logger()
 
@@ -70,8 +70,8 @@ func NewLogger(level int, name string, fileLogger *lumberjack.Logger, stfields .
 // If static fields are provided those values will define
 // the default static fields for each new built instance
 // if they were not yet configured.
-func NewDevLogger(level int, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
-	if level < Disabled || level > LevelError {
+func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
+	if level < LevelDisabled || level > LevelError {
 		level = LevelInfo
 	}
 
@@ -126,12 +126,12 @@ func NewDevLogger(level int, name string, fileLogger *lumberjack.Logger, stfield
 
 	stdl := zerolog.New(output).With().
 		Timestamp().
-		CallerWithSkipFrameCount(4).
+		CallerWithSkipFrameCount(cfgSkipCallerCount).
 		Stack().
 		Logger()
 	errl := zerolog.New(output).With().
 		Timestamp().
-		CallerWithSkipFrameCount(4).
+		CallerWithSkipFrameCount(cfgSkipCallerCount).
 		Stack().
 		Logger()
 

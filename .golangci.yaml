@@ -1,16 +1,18 @@
 linters:
   enable:
-    - vet
-    - golint
-    - wsl
+    - asciicheck
     - bodyclose
     - deadcode
     - errcheck
+    - exportloopref
     - goconst
     - gocritic
     - gocyclo
+    - goerr113
     - gofmt
     - goimports
+    - golint
+    - gomnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -19,5 +21,9 @@ linters:
     - interfacer
     - misspell
     - nakedret
+    - rowserrcheck
+    - stylecheck
     - testpackage
-    - goerr113
+    - unparam
+    - vet
+    - wsl
