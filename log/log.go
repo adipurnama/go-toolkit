@@ -1,9 +1,10 @@
-// Package log provide log interface to logging library
+// Package log is internal log wrapper functionality
 package log
 
 import (
 	"context"
 	"fmt"
+	"io"
 	stdLog "log"
 	"os"
 	"runtime"
@@ -12,12 +13,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
-	cfg config
-
 	// defaultLogger is the package default logger.
 	// It can be used right out of the box.
 	// It can be replaced by a custom configured one
@@ -27,121 +25,7 @@ var (
 )
 
 func init() {
-	defaultLogger = NewLogger(LevelDebug, "logger", nil)
-}
-
-// Logger is structured leveled logger
-type Logger struct {
-	// Level of min logging
-	Level Level
-	// Version
-	Version string
-	// Revision
-	Revision string
-	// DebugLog logger
-	StdLog zerolog.Logger
-	// ErrorLog logger
-	ErrLog zerolog.Logger
-	// Dynamic fields
-	dynafields []interface{}
-}
-
-type config struct {
-	// Name
-	name string
-	// Level of min logging
-	level Level
-	// Static fields
-	stfields []interface{}
-	// configured
-	configured bool
-
-	fileLogger *lumberjack.Logger
-
-	isDevelopment bool
-}
-
-// ErrFunc is any function with empty argument and could returns error
-type ErrFunc func() error
-
-type contextKey struct {
-	name string
-}
-
-// String returns formatted context key identifier.
-func (k *contextKey) String() string {
-	return "mw-" + k.name
-}
-
-// setup name and static fields.
-// Each new instance of logger will always append these
-// key-value pairs to the output and name if it is not empty.
-// These values cannot be modified after they are configured.
-func setup(name string, fileLogger *lumberjack.Logger, isDevelopment bool, stfields []interface{}) {
-	if cfg.configured {
-		return
-	}
-
-	cfg.isDevelopment = isDevelopment
-	cfg.name = name
-	cfg.stfields = append(cfg.stfields, stfields...)
-	cfg.configured = true
-	cfg.fileLogger = fileLogger
-}
-
-// SetFields set logger dynamic fields.
-// The receiver instance will always append these
-// key-value pairs to the output.
-func (l *Logger) SetFields(dynafields ...interface{}) {
-	l.dynafields = make([]interface{}, 0)
-	l.dynafields = append(l.dynafields, dynafields...)
-}
-
-// AddField add dynamic field key-value
-// The receiver instance will always append these
-// key-value pairs to the output.
-func (l *Logger) AddField(key, value interface{}) {
-	l.dynafields = append(l.dynafields, key, value)
-}
-
-// ResetFields clear all the logger's  assigned dymanic fields
-// Remove dynamic fields.
-func (l *Logger) ResetFields() {
-	l.dynafields = make([]interface{}, 0)
-}
-
-// GetLevelFromString return error level based on config string
-func GetLevelFromString(level string) Level {
-	switch level {
-	case "info":
-		return LevelInfo
-	case "warn":
-		return LevelWarn
-	case "error":
-		return LevelError
-	default:
-		return LevelDebug
-	}
-}
-
-// AddToContext returns new context.Context with additional logger
-func AddToContext(ctx context.Context, l *Logger) context.Context {
-	return context.WithValue(ctx, loggerCtxKey, l)
-}
-
-// Set the base package logger.
-func Set(l *Logger) {
-	defaultLogger = l
-}
-
-// Set default package logger.
-// Can be used chained with NewLogger to create a new one,
-// set it up as package default logger and get it for use in one step.
-// i.e:
-// logger := log.NewLogger(log.Debug, "name", "version", "revision").Set()
-func (l *Logger) Set() *Logger {
-	defaultLogger = l
-	return defaultLogger
+	defaultLogger = NewLogger(LevelDebug, "logger", nil, nil)
 }
 
 // NewContextLogger returns a copy of context that also includes a configured logger.
@@ -155,20 +39,24 @@ func NewContextLogger(ctx context.Context, fields ...interface{}) context.Contex
 	return context.WithValue(ctx, loggerCtxKey, l)
 }
 
+// AddToContext returns new context.Context with additional logger
+func AddToContext(ctx context.Context, l *Logger) context.Context {
+	return context.WithValue(ctx, loggerCtxKey, l)
+}
+
 // FromCtx returns current logger in context.
 // If there is not logger in context it returns
 // a new one with current config values.
 func FromCtx(ctx context.Context) *Logger {
-	l, ok := ctx.Value(loggerCtxKey).(*Logger)
-	if !ok {
-		if cfg.isDevelopment {
-			return NewDevLogger(cfg.level, cfg.name, cfg.fileLogger, cfg.stfields...)
-		}
-
-		return NewLogger(cfg.level, cfg.name, cfg.fileLogger, cfg.stfields...)
+	if l, ok := ctx.Value(loggerCtxKey).(*Logger); ok {
+		return l
 	}
 
-	return l
+	if cfg.isDevelopment {
+		return NewDevLogger(cfg.level, cfg.name, cfg.fileLogger, cfg.batchCfg, cfg.stfields...)
+	}
+
+	return NewLogger(cfg.level, cfg.name, cfg.fileLogger, cfg.batchCfg, cfg.stfields...)
 }
 
 // Debug logs debug messages.
@@ -240,34 +128,40 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 
 	if len(cfg.stfields) > 1 {
 		for i := 0; i < len(cfg.stfields)-1; i++ {
-			if cfg.stfields[i] != nil {
-				k := stringify(cfg.stfields[i])
-				fs[k] = cfg.stfields[i+1]
-				i++
+			if cfg.stfields[i] == nil {
+				continue
 			}
+
+			k := stringify(cfg.stfields[i])
+			fs[k] = cfg.stfields[i+1]
+			i++
 		}
 	}
 
 	// check at least have "key":  "value"
 	if len(dynafields) > 1 {
 		for i := 0; i < len(dynafields)-1; i++ {
-			if dynafields[i] != nil {
-				k := stringify(dynafields[i])
-				fs[k] = dynafields[i+1]
-				// fmt.Printf("dyna - (%s, %v)\n", k, fs[k])
-				i++
+			if dynafields[i] == nil {
+				continue
 			}
+
+			k := stringify(dynafields[i])
+			fs[k] = dynafields[i+1]
+			// fmt.Printf("dyna - (%s, %v)\n", k, fs[k])
+			i++
 		}
 	}
 
 	if len(fields) > 1 {
 		for i := 0; i < len(fields)-1; i++ {
-			if fields[i] != nil {
-				k := stringify(fields[i])
-				fs[k] = fields[i+1]
-				// fmt.Printf("field - (%s, %v)\n", k, fs[k])
-				i++
+			if fields[i] == nil {
+				continue
 			}
+
+			k := stringify(fields[i])
+			fs[k] = fields[i+1]
+			// fmt.Printf("field - (%s, %v)\n", k, fs[k])
+			i++
 		}
 	}
 
@@ -327,7 +221,7 @@ func setLogLevel(l *zerolog.Logger, level Level) {
 // Print calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Print.
 func Print(v ...interface{}) {
-	if fileFmt, ok := fileLineLogFmt("INFO"); ok {
+	if fileFmt, ok := fileLineLogFmt(LevelInfo); ok {
 		stdLog.Print(fileFmt + fmt.Sprint(v...))
 		return
 	}
@@ -338,7 +232,7 @@ func Print(v ...interface{}) {
 // Printf calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
 func Printf(format string, v ...interface{}) {
-	if fileFmt, ok := fileLineLogFmt("INFO"); ok {
+	if fileFmt, ok := stdFileLineLogFmt(LevelInfo); ok {
 		stdLog.Printf(fileFmt+format, v...)
 		return
 	}
@@ -349,7 +243,7 @@ func Printf(format string, v ...interface{}) {
 // Println calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Println.
 func Println(v ...interface{}) {
-	if fileFmt, ok := fileLineLogFmt("INFO"); ok {
+	if fileFmt, ok := stdFileLineLogFmt(LevelInfo); ok {
 		stdLog.Printf(fileFmt + fmt.Sprintln(v...))
 		return
 	}
@@ -359,7 +253,7 @@ func Println(v ...interface{}) {
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
 func Fatal(v ...interface{}) {
-	if fileFmt, ok := fileLineLogFmt("ERROR"); ok {
+	if fileFmt, ok := stdFileLineLogFmt(LevelError); ok {
 		stdLog.Fatal(fileFmt + fmt.Sprintln(v...))
 		return
 	}
@@ -371,7 +265,7 @@ func Fatal(v ...interface{}) {
 
 // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 func Fatalf(format string, v ...interface{}) {
-	if fileFmt, ok := fileLineLogFmt("ERROR"); ok {
+	if fileFmt, ok := stdFileLineLogFmt(LevelError); ok {
 		stdLog.Fatalf(fileFmt+format+"\n", v...)
 		return
 	}
@@ -383,32 +277,51 @@ func Fatalf(format string, v ...interface{}) {
 
 // helper function to get caller file & line number info
 // returns formatted string ` | $LEVEL | dir/file:line | `
-func fileLineLogFmt(level string) (string, bool) {
-	skip := 3
+func fileLineLogFmt(level Level) (string, bool) {
+	skipCallerCount := 3
 
-	_, file, line, ok := runtime.Caller(skip)
-	if ok {
-		result := fmt.Sprintf("%s:%d", file, line)
-
-		cwd, err := os.Getwd()
-		if err == nil {
-			result = strings.TrimPrefix(result, cwd)
-			result = strings.TrimPrefix(result, "/")
-		}
-
-		return fmt.Sprintf(" | %s | %s | ", level, result), true
+	_, file, line, ok := runtime.Caller(skipCallerCount)
+	if !ok {
+		return "", false
 	}
 
-	return "", false
+	result := fmt.Sprintf("%s:%d", file, line)
+
+	cwd, err := os.Getwd()
+	if err == nil {
+		result = strings.TrimPrefix(result, cwd)
+		result = strings.TrimPrefix(result, "/")
+	}
+
+	return fmt.Sprintf(" | %s | %s | ", levelString(level), result), true
 }
 
-// OnErrorFuncf execute function f with possible error return.
+func stdFileLineLogFmt(level Level) (string, bool) {
+	skipCallerCount := 2
+
+	_, file, line, ok := runtime.Caller(skipCallerCount)
+	if !ok {
+		return "", false
+	}
+
+	result := fmt.Sprintf("%s:%d", file, line)
+
+	cwd, err := os.Getwd()
+	if err == nil {
+		result = strings.TrimPrefix(result, cwd)
+		result = strings.TrimPrefix(result, "/")
+	}
+
+	return fmt.Sprintf(" | %s | %s | ", levelString(level), result), true
+}
+
+// OnCloseErrorf execute function f with possible error return.
 // It logs an error if error from f is found
 // it aims to be used for deferred method such : resp.Body.Close(), tx.Rollback()
 // Pass nil as logger to use default package logger
 // So it should be used like: `defer log.OnOnErrorFunc(logger, resp.Body.Close, "closing response body for path %s", path)
-func OnErrorFuncf(logger *Logger, f ErrFunc, format string, v ...interface{}) {
-	err := f()
+func OnCloseErrorf(logger *Logger, f io.Closer, format string, v ...interface{}) {
+	err := f.Close()
 	if err == nil {
 		return
 	}
@@ -424,13 +337,13 @@ func OnErrorFuncf(logger *Logger, f ErrFunc, format string, v ...interface{}) {
 	logger.Warn("error detected", "err", errors.Wrapf(err, format, v...))
 }
 
-// OnErrorFunc execute function f with possible error return.
+// OnCloseError execute function f with possible error return.
 // It logs an error if error from f is found
 // it aims to be used for deferred method such : resp.Body.Close(), tx.Rollback()
 // Pass nil as logger to use default package logger
 // So it should be used like: `defer log.OnOnErrorFunc(logger, resp.Body.Close)
-func OnErrorFunc(logger *Logger, f ErrFunc) {
-	err := f()
+func OnCloseError(logger *Logger, f io.Closer) {
+	err := f.Close()
 	if err == nil {
 		return
 	}

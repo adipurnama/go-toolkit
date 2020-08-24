@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// _ = log.NewLogger(log.LevelDebug, "sample-prod-logger", nil, "custom", "value").Set()
-	_ = log.NewDevLogger(log.LevelDebug, "sample-logger", nil, "example", true).Set()
+	_ = log.NewDevLogger(log.LevelDebug, "sample-logger", nil, nil, "example", true).Set()
 
 	ctx := context.Background()
 	logger := log.FromCtx(ctx)

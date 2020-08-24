@@ -22,3 +22,16 @@ const (
 var (
 	loggerCtxKey contextKey = contextKey{name: "internal-ctx-log"}
 )
+
+func levelString(l Level) string {
+	switch l {
+	case LevelError:
+		return "ERROR"
+	case LevelWarn:
+		return "WARN"
+	case LevelInfo:
+		return "INFO"
+	default:
+		return "DEBUG"
+	}
+}

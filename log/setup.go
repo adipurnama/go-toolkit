@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/diode"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -16,7 +17,7 @@ import (
 // If static fields are provided those values will define
 // the default static fields for each new built instance
 // if they were not yet configured.
-func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
+func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields ...interface{}) *Logger {
 	if level < LevelDisabled || level > LevelError {
 		level = LevelInfo
 	}
@@ -32,6 +33,15 @@ func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields
 	} else {
 		stdWriter = os.Stdout
 		errWriter = os.Stderr
+	}
+
+	if batchCfg != nil {
+		stdWriter = diode.NewWriter(stdWriter, batchCfg.MaxLines, batchCfg.Interval, func(missed int) {
+			fmt.Printf("Logger Dropped %d messages", missed)
+		})
+		errWriter = diode.NewWriter(errWriter, batchCfg.MaxLines, batchCfg.Interval, func(missed int) {
+			fmt.Printf("Logger Dropped %d messages", missed)
+		})
 	}
 
 	stdl := log.Output(stdWriter).With().
@@ -55,8 +65,7 @@ func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields
 	}
 
 	if len(stfields) > 1 && !cfg.configured {
-		// if !cfg.configured {
-		setup(name, fileLogger, false, stfields)
+		setup(level, name, fileLogger, false, batchCfg, stfields)
 
 		defaultLogger = l
 	}
@@ -70,25 +79,31 @@ func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields
 // If static fields are provided those values will define
 // the default static fields for each new built instance
 // if they were not yet configured.
-func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, stfields ...interface{}) *Logger {
+func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields ...interface{}) *Logger {
 	if level < LevelDisabled || level > LevelError {
 		level = LevelInfo
 	}
 
-	var output zerolog.ConsoleWriter
+	var writer io.Writer
 
 	if fileLogger != nil {
-		multiWriter := io.MultiWriter(os.Stdout, fileLogger)
-		output = zerolog.ConsoleWriter{Out: multiWriter, TimeFormat: time.RFC3339}
+		writer = io.MultiWriter(os.Stdout, fileLogger)
 	} else {
-		output = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
+		writer = os.Stdout
 	}
 
+	if batchCfg != nil {
+		writer = diode.NewWriter(writer, batchCfg.MaxLines, batchCfg.Interval, func(missed int) {
+			fmt.Printf("Logger Dropped %d messages", missed)
+		})
+	}
+
+	output := zerolog.ConsoleWriter{Out: writer, TimeFormat: time.RFC3339}
 	output.FormatLevel = func(i interface{}) string {
 		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 	}
 	output.FormatMessage = func(i interface{}) string {
-		return fmt.Sprintf("%s |", i)
+		return fmt.Sprintf("** %s **", i)
 	}
 	output.FormatFieldName = func(i interface{}) string {
 		return fmt.Sprintf("%s=", i)
@@ -100,11 +115,11 @@ func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, stfie
 
 		return fmt.Sprintf("%s", i)
 	}
-	output.FormatErrFieldName = func(i interface{}) string {
-		return "error="
-	}
 	output.FormatTimestamp = func(i interface{}) string {
 		return fmt.Sprintf("%s", i)
+	}
+	output.FormatErrFieldName = func(i interface{}) string {
+		return "error="
 	}
 	output.FormatCaller = func(i interface{}) string {
 		var c string
@@ -113,12 +128,14 @@ func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, stfie
 			c = cc
 		}
 
-		if len(c) > 0 {
-			cwd, err := os.Getwd()
-			if err == nil {
-				c = strings.TrimPrefix(c, cwd)
-				c = strings.TrimPrefix(c, "/")
-			}
+		if len(c) == 0 {
+			return fmt.Sprintf("%s |", c)
+		}
+
+		cwd, err := os.Getwd()
+		if err == nil {
+			c = strings.TrimPrefix(c, cwd)
+			c = strings.TrimPrefix(c, "/")
 		}
 
 		return fmt.Sprintf("%s |", c)
@@ -146,10 +163,25 @@ func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, stfie
 
 	// if len(stfields) > 1 && !cfg.configured {
 	if !cfg.configured {
-		setup(name, fileLogger, true, stfields)
+		setup(level, name, fileLogger, true, batchCfg, stfields)
 
 		defaultLogger = l
 	}
 
 	return l
+}
+
+// Set the base package logger.
+func Set(l *Logger) {
+	defaultLogger = l
+}
+
+// Set default package logger.
+// Can be used chained with NewLogger to create a new one,
+// set it up as package default logger and get it for use in one step.
+// i.e:
+// logger := log.NewLogger(log.Debug, "name", "version", "revision").Set()
+func (l *Logger) Set() *Logger {
+	defaultLogger = l
+	return defaultLogger
 }
