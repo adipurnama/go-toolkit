@@ -1,8 +1,10 @@
+// Package echokit provides helper for echo web framework app
 package echokit
 
 import (
+	"strings"
+
 	"github.com/adipurnama/go-toolkit/log"
-	"github.com/adipurnama/go-toolkit/mask"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/adipurnama/go-toolkit/web"
@@ -20,6 +22,7 @@ import (
 func RequestIDLoggerMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
+			rCtx := log.NewContextLogger(ctx.Request().Context())
 			logger := log.FromCtx(ctx.Request().Context())
 
 			// trace ID
@@ -44,7 +47,6 @@ func RequestIDLoggerMiddleware() echo.MiddlewareFunc {
 			ctx.Response().Header().Set(web.HTTPKeyRequestID, rID)
 			logger.AddField("request_id", web.HTTPKeyRequestID)
 
-			rCtx := log.NewContextLogger(ctx.Request().Context(), logger)
 			ctx.SetRequest(ctx.Request().WithContext(rCtx))
 
 			return next(ctx)
@@ -53,15 +55,24 @@ func RequestIDLoggerMiddleware() echo.MiddlewareFunc {
 }
 
 // BodyDumpHandler logs incoming request & outgoing response body.
-func BodyDumpHandler() middleware.BodyDumpHandler {
-	return func(ctx echo.Context, reqBody []byte, respBody []byte) {
-		log.FromCtx(ctx.Request().Context()).Info(
-			"request completed",
-			"http_method", ctx.Request().Method,
-			"http_path", mask.URL(ctx.Request().RequestURI),
-			"http_status", ctx.Response().Status,
-			"http_request", mask.URL(string(reqBody)),
-			"http_response", mask.URL(string(respBody)),
-		)
-	}
+func BodyDumpHandler(skipper middleware.Skipper) echo.MiddlewareFunc {
+	return middleware.BodyDumpWithConfig(
+		middleware.BodyDumpConfig{
+			Skipper: skipper,
+			Handler: bodyDumpHandlerFunc,
+		},
+	)
+}
+
+func bodyDumpHandlerFunc(c echo.Context, reqBody []byte, respBody []byte) {
+	l := log.FromCtx(c.Request().Context())
+	respStr := strings.Replace(string(respBody), "}\n", "}", 1)
+	reqStr := strings.Replace(string(reqBody), "}\n", "}", 1)
+
+	l.Debug("REST request completed",
+		"http.response", respStr,
+		"http.request", reqStr,
+		"http.status_code", c.Response().Status,
+		"http.header", c.Request().Header,
+	)
 }

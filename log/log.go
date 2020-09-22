@@ -28,6 +28,11 @@ func init() {
 	defaultLogger = NewLogger(LevelDebug, "logger", nil, nil)
 }
 
+// AddToContext returns new context.Context with additional logger.
+func AddToContext(ctx context.Context, l *Logger) context.Context {
+	return context.WithValue(ctx, loggerCtxKey, l)
+}
+
 // NewContextLogger returns a copy of context that also includes a configured logger.
 func NewContextLogger(ctx context.Context, fields ...interface{}) context.Context {
 	l := FromCtx(ctx)
@@ -39,24 +44,26 @@ func NewContextLogger(ctx context.Context, fields ...interface{}) context.Contex
 	return context.WithValue(ctx, loggerCtxKey, l)
 }
 
-// AddToContext returns new context.Context with additional logger
-func AddToContext(ctx context.Context, l *Logger) context.Context {
-	return context.WithValue(ctx, loggerCtxKey, l)
-}
-
 // FromCtx returns current logger in context.
-// If there is not logger in context it returns
+// If there is no logger in context it returns
 // a new one with current config values.
+// logger initial attribute fields is copied from existing defaultLogger fields.
 func FromCtx(ctx context.Context) *Logger {
 	if l, ok := ctx.Value(loggerCtxKey).(*Logger); ok {
 		return l
 	}
 
-	if cfg.isDevelopment {
-		return NewDevLogger(cfg.level, cfg.name, cfg.fileLogger, cfg.batchCfg, cfg.stfields...)
-	}
+	fields := make([]interface{}, len(defaultLogger.dynafields))
+	_ = copy(fields, defaultLogger.dynafields)
 
-	return NewLogger(cfg.level, cfg.name, cfg.fileLogger, cfg.batchCfg, cfg.stfields...)
+	return &Logger{
+		Level:      defaultLogger.Level,
+		Version:    defaultLogger.Revision,
+		Revision:   defaultLogger.Revision,
+		StdLog:     defaultLogger.StdLog,
+		ErrLog:     defaultLogger.ErrLog,
+		dynafields: fields,
+	}
 }
 
 // Debug logs debug messages.
@@ -133,7 +140,12 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 			}
 
 			k := stringify(cfg.stfields[i])
-			fs[k] = cfg.stfields[i+1]
+			if IsSensitiveParam(k) {
+				fs[k] = RedactionString
+			} else {
+				fs[k] = cfg.stfields[i+1]
+			}
+
 			i++
 		}
 	}
@@ -146,8 +158,12 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 			}
 
 			k := stringify(dynafields[i])
-			fs[k] = dynafields[i+1]
-			// fmt.Printf("dyna - (%s, %v)\n", k, fs[k])
+			if IsSensitiveParam(k) {
+				fs[k] = RedactionString
+			} else {
+				fs[k] = dynafields[i+1]
+			}
+
 			i++
 		}
 	}
@@ -159,8 +175,12 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 			}
 
 			k := stringify(fields[i])
-			fs[k] = fields[i+1]
-			// fmt.Printf("field - (%s, %v)\n", k, fs[k])
+			if IsSensitiveParam(k) {
+				fs[k] = RedactionString
+			} else {
+				fs[k] = fields[i+1]
+			}
+
 			i++
 		}
 	}
@@ -276,7 +296,7 @@ func Fatalf(format string, v ...interface{}) {
 }
 
 // helper function to get caller file & line number info
-// returns formatted string ` | $LEVEL | dir/file:line | `
+// returns formatted string ` | $LEVEL | dir/file:line | `.
 func fileLineLogFmt(level Level) (string, bool) {
 	skipCallerCount := 3
 
@@ -319,7 +339,7 @@ func stdFileLineLogFmt(level Level) (string, bool) {
 // It logs an error if error from f is found
 // it aims to be used for deferred method such : resp.Body.Close(), tx.Rollback()
 // Pass nil as logger to use default package logger
-// So it should be used like: `defer log.OnOnErrorFunc(logger, resp.Body.Close, "closing response body for path %s", path)
+// So it should be used like: `defer log.OnOnErrorFunc(logger, resp.Body.Close, "closing response body for path %s", path).
 func OnCloseErrorf(logger *Logger, f io.Closer, format string, v ...interface{}) {
 	err := f.Close()
 	if err == nil {
@@ -341,7 +361,7 @@ func OnCloseErrorf(logger *Logger, f io.Closer, format string, v ...interface{})
 // It logs an error if error from f is found
 // it aims to be used for deferred method such : resp.Body.Close(), tx.Rollback()
 // Pass nil as logger to use default package logger
-// So it should be used like: `defer log.OnOnErrorFunc(logger, resp.Body.Close)
+// So it should be used like: `defer log.OnOnErrorFunc(logger, resp.Body.Close).
 func OnCloseError(logger *Logger, f io.Closer) {
 	err := f.Close()
 	if err == nil {

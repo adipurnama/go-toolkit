@@ -11,7 +11,7 @@ var (
 	cfg config
 )
 
-// Logger is structured leveled logger
+// Logger is structured leveled logger.
 type Logger struct {
 	// Level of min logging
 	Level Level
@@ -45,14 +45,14 @@ type config struct {
 }
 
 // ErrFunc is any function which takes no argument and possibly returns error
-// e.g. tx.Rollback(), resp.Body.Close()
+// e.g. tx.Rollback(), resp.Body.Close().
 type ErrFunc func() error
 
 type contextKey struct {
 	name string
 }
 
-// BatchConfig  is configuration for async log batch writer
+// BatchConfig  is configuration for async log batch writer.
 type BatchConfig struct {
 	Enabled  bool
 	Interval time.Duration
@@ -101,18 +101,4 @@ func (l *Logger) AddField(key, value interface{}) {
 // Remove dynamic fields.
 func (l *Logger) ResetFields() {
 	l.dynafields = make([]interface{}, 0)
-}
-
-// GetLevelFromString return error level based on config string
-func GetLevelFromString(level string) Level {
-	switch level {
-	case "info":
-		return LevelInfo
-	case "warn":
-		return LevelWarn
-	case "debug":
-		return LevelDebug
-	default:
-		return LevelError
-	}
 }
