@@ -31,7 +31,7 @@ func main() {
 
 	s := grpc.NewServer(uIntOpt)
 
-	grpckit.Run(s, cfg)
+	grpckit.Run(s, &cfg)
 }
 
 // if necesssary do complex checking here

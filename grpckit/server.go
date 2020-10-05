@@ -25,7 +25,7 @@ type RuntimeConfig struct {
 }
 
 // Run grpc server with healthcheck, creating new app context
-func Run(s *grpc.Server, cfg RuntimeConfig) {
+func Run(s *grpc.Server, cfg *RuntimeConfig) {
 	appCtx, done := signalcontext.Wrap(
 		log.NewContextLogger(context.Background()),
 		os.Interrupt,
@@ -38,7 +38,7 @@ func Run(s *grpc.Server, cfg RuntimeConfig) {
 }
 
 // RunWithContext run grpc server with healthcheck using existing background context
-func RunWithContext(appCtx context.Context, s *grpc.Server, cfg RuntimeConfig) {
+func RunWithContext(appCtx context.Context, s *grpc.Server, cfg *RuntimeConfig) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
 	if err != nil {
 		log.FromCtx(appCtx).Error(err, "net.Listen", "grpc_app_name", cfg.Name)
