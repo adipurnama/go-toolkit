@@ -55,17 +55,17 @@ func RunWithContext(appCtx context.Context, s *grpc.Server, cfg RuntimeConfig) {
 	log.FromCtx(appCtx).Info("serving gRPC service", "port", cfg.Port, "grpc_app_name", cfg.Name)
 
 	go func() {
-		if err := s.Serve(lis); err != nil {
-			log.FromCtx(appCtx).Error(err, "s.Serve", "grpc_app_name", cfg.Name)
-		}
+		<-appCtx.Done()
+
+		hs.Serving = false
+
+		log.FromCtx(appCtx).Info(fmt.Sprintf("shutting down gRPC server in %d ms...", cfg.ShutdownWaitDuration.Milliseconds()))
+		<-time.After(cfg.ShutdownWaitDuration)
+
+		s.GracefulStop()
 	}()
 
-	<-appCtx.Done()
-
-	hs.Serving = false
-
-	log.FromCtx(appCtx).Info(fmt.Sprintf("shutting down gRPC server in %d ms...", cfg.ShutdownWaitDuration.Milliseconds()))
-	<-time.After(cfg.ShutdownWaitDuration)
-
-	s.GracefulStop()
+	if err := s.Serve(lis); err != nil {
+		log.FromCtx(appCtx).Error(err, "s.Serve", "grpc_app_name", cfg.Name)
+	}
 }

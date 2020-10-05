@@ -34,6 +34,12 @@ func (s *HealthCheckServer) Check(ctx context.Context, _ *grpc_health_v1.HealthC
 		return &resp, nil
 	}
 
+	if s.healthCheckFunc == nil {
+		resp.Status = grpc_health_v1.HealthCheckResponse_SERVING
+
+		return &resp, nil
+	}
+
 	err := s.healthCheckFunc(ctx)
 	if err != nil {
 		resp.Status = grpc_health_v1.HealthCheckResponse_NOT_SERVING

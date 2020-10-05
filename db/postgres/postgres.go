@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var intervalKeepAlive = 5 * time.Second
+const intervalKeepAlive = 5 * time.Second
 
 // NewPostgresDatabase - create & validate postgres connection given certain db.Option
 // the caller have the responsibility to close the *sqlx.DB when succeed.
