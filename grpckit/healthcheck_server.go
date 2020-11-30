@@ -26,7 +26,9 @@ type HealthCheckFunc func(context.Context) error
 
 // Check - grpc_health_v1.Server impl
 func (s *HealthCheckServer) Check(ctx context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	resp := grpc_health_v1.HealthCheckResponse{}
+	resp := grpc_health_v1.HealthCheckResponse{
+		Status: grpc_health_v1.HealthCheckResponse_SERVING,
+	}
 
 	if !s.Serving {
 		resp.Status = grpc_health_v1.HealthCheckResponse_NOT_SERVING

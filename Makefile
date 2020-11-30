@@ -37,5 +37,6 @@ ifndef PROTOC_CMD
 endif
 	@echo -e "$(OK_COLOR)==> Generate proto objects to grpckit/$(NO_COLOR)..."
 	@protoc --proto_path=./grpckit --go_out=plugins=grpc:./ grpckit/health.proto
+	@protoc --proto_path=./example/grpc-server --go_out=plugins=grpc:./ example/grpc-server/example_service.proto
 	@echo -e "$(OK_COLOR)==> Done$(NO_COLOR)..."
 
