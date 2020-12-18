@@ -45,8 +45,9 @@ func TestNewDatabaseOption(t *testing.T) {
 				port: 1212,
 			},
 			&db.Option{
-				Host: "localhost",
-				Port: 1212,
+				Host:             "localhost",
+				Port:             1212,
+				ConnectionOption: db.DefaultConnectionOption(),
 			},
 			false,
 		},
@@ -54,10 +55,14 @@ func TestNewDatabaseOption(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := db.NewDatabaseOption(tt.args.host, tt.args.port, tt.args.username, tt.args.password, tt.args.dbName)
+			got, err := db.NewDatabaseOption(tt.args.host, tt.args.port, tt.args.username, tt.args.password, tt.args.dbName, nil)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewDatabaseOption() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if got == nil {
 				return
 			}
 

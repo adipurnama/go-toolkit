@@ -31,18 +31,22 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 		return nil, err
 	}
 
+	db.SetMaxIdleConns(opt.ConnectionOption.MaxIdle)
+	db.SetConnMaxLifetime(opt.ConnectionOption.MaxLifetime)
+	db.SetMaxOpenConns(opt.ConnectionOption.MaxOpen)
+
 	_ = db.QueryRow("SELECT 1")
 
-	go doKeepAliveConnection(db, intervalKeepAlive)
+	go doKeepAliveConnection(db, opt.DatabaseName, intervalKeepAlive)
 
 	return db, nil
 }
 
-func doKeepAliveConnection(db *sqlx.DB, interval time.Duration) {
+func doKeepAliveConnection(db *sqlx.DB, dbName string, interval time.Duration) {
 	for {
 		rows, err := db.Query("SELECT 1")
 		if err != nil {
-			log.Printf("db.doKeepAliveConnection conn=postgres error=%s\n", err)
+			log.Printf("db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", err, dbName)
 			return
 		}
 
@@ -50,7 +54,7 @@ func doKeepAliveConnection(db *sqlx.DB, interval time.Duration) {
 			var i int
 
 			_ = rows.Scan(&i)
-			log.Printf("db.doKeepAliveConnection counter=%d stats=%v\n", i, db.Stats())
+			log.Printf("db.doKeepAliveConnection counter=%d db_name=%s stats=%v\n", i, dbName, db.Stats())
 		}
 
 		_ = rows.Close()
