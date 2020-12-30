@@ -2,6 +2,7 @@
 package postgres
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
@@ -35,7 +36,10 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 	db.SetConnMaxLifetime(opt.ConnectionOption.MaxLifetime)
 	db.SetMaxOpenConns(opt.ConnectionOption.MaxOpen)
 
-	_ = db.QueryRow("SELECT 1")
+	ctx, cancel := context.WithTimeout(context.Background(), opt.ConnectionOption.ConnectTimeout)
+	defer cancel()
+
+	_ = db.QueryRowContext(ctx, "SELECT 1")
 
 	go doKeepAliveConnection(db, opt.DatabaseName, intervalKeepAlive)
 

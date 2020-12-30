@@ -16,6 +16,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sethvargo/go-signalcontext v0.1.0
 	github.com/stretchr/testify v1.6.1
+	go.mongodb.org/mongo-driver v1.4.4
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

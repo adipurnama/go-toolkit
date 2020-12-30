@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	defaultMaxOpen     = 100
-	defaultMaxLifetime = 10 * time.Minute
-	defaultMaxIdle     = 5
+	defaultMaxOpen        = 100
+	defaultMaxLifetime    = 10 * time.Minute
+	defaultMaxIdle        = 5
+	defaultConnectTimeout = 10 * time.Second
 )
 
 // Option - database option.
@@ -24,17 +25,19 @@ type Option struct {
 
 // ConnectionOption is db connection option
 type ConnectionOption struct {
-	MaxIdle     int
-	MaxLifetime time.Duration
-	MaxOpen     int
+	MaxIdle        int
+	MaxLifetime    time.Duration
+	MaxOpen        int
+	ConnectTimeout time.Duration
 }
 
 // DefaultConnectionOption returns sensible conn setting
 func DefaultConnectionOption() *ConnectionOption {
 	return &ConnectionOption{
-		MaxIdle:     defaultMaxIdle,
-		MaxOpen:     defaultMaxOpen,
-		MaxLifetime: defaultMaxLifetime,
+		MaxIdle:        defaultMaxIdle,
+		MaxOpen:        defaultMaxOpen,
+		MaxLifetime:    defaultMaxLifetime,
+		ConnectTimeout: defaultConnectTimeout,
 	}
 }
 
