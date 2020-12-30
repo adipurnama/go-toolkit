@@ -3,7 +3,6 @@ package mongokit
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 
 	"github.com/adipurnama/go-toolkit/db"
@@ -30,7 +29,7 @@ func NewMongoDBClient(opt *db.Option) (*mongo.Client, error) {
 
 	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
-		log.Fatalf("Cannot create MongoDB client: %s", err)
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), opt.ConnectionOption.ConnectTimeout)
