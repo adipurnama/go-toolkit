@@ -49,7 +49,7 @@ func NewDatabaseOption(host string, port int, username, password, dbName string,
 		return nil, errInvalidDBSource
 	}
 
-	if conn == nil {
+	if conn == nil || conn.MaxOpen == 0 || conn.MaxOpen < conn.MaxIdle || conn.ConnectTimeout == 0 {
 		conn = DefaultConnectionOption()
 	}
 

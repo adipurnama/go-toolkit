@@ -3,16 +3,36 @@ package web
 import (
 	"context"
 	"net/http"
+	"os"
+	"syscall"
+
+	"github.com/adipurnama/go-toolkit/log"
+	"github.com/sethvargo/go-signalcontext"
 )
 
 var (
 	// ContextKeyRequestID to obtains requestID from context
 	ContextKeyRequestID = ContextKey("reqID")
+
 	// ContextKeyHeader to obtains original http header from downstream
 	ContextKeyHeader = ContextKey("header")
+
 	// ContextKeyTraceID to obtains traceID from downstream context
 	ContextKeyTraceID = ContextKey("traceID")
 )
+
+// NewRuntimeContext returns context & cancel func listening to :
+// - os.Interrupt
+// - syscall.SIGTERM
+// - syscall.SIGINT
+func NewRuntimeContext() (context.Context, context.CancelFunc) {
+	return signalcontext.Wrap(
+		log.NewLoggingContext(context.Background()),
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+	)
+}
 
 // ContextID is a struct which will be used as context key.
 type ContextID struct {

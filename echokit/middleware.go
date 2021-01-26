@@ -22,7 +22,7 @@ import (
 func RequestIDLoggerMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			rCtx := log.NewContextLogger(ctx.Request().Context())
+			rCtx := log.NewLoggingContext(ctx.Request().Context())
 			logger := log.FromCtx(ctx.Request().Context())
 
 			// trace ID

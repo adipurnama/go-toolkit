@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// HTTPClient abstarcts away general http API Call.
+// HTTPClient abstracts away general http API Call.
 type HTTPClient interface {
 	Do(r *http.Request) (*http.Response, error)
 }

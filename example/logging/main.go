@@ -14,7 +14,7 @@ func main() {
 	ctx := context.Background()
 	logger := log.FromCtx(ctx)
 	logger.AddField("my_field", "custom")
-	ctx = log.NewContextLogger(ctx, logger)
+	ctx = log.NewLoggingContext(ctx, logger)
 
 	log.FromCtx(ctx).Info("debug message - no error", "field_here", "whatever")
 

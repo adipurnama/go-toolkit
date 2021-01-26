@@ -33,8 +33,8 @@ func AddToContext(ctx context.Context, l *Logger) context.Context {
 	return context.WithValue(ctx, loggerCtxKey, l)
 }
 
-// NewContextLogger returns a copy of context that also includes a configured logger.
-func NewContextLogger(ctx context.Context, fields ...interface{}) context.Context {
+// NewLoggingContext returns a copy of context that also includes a configured logger.
+func NewLoggingContext(ctx context.Context, fields ...interface{}) context.Context {
 	l := FromCtx(ctx)
 
 	if len(fields) > 0 {

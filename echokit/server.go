@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"syscall"
 	"time"
+
+	"github.com/adipurnama/go-toolkit/web"
 
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/labstack/echo/v4"
-	"github.com/sethvargo/go-signalcontext"
 )
 
 // RuntimeConfig restapi runtime config with healthcheck
@@ -34,12 +33,7 @@ type HealthCheckFunc func(ctx context.Context) error
 
 // RunServer run graceful restapi server
 func RunServer(e *echo.Echo, cfg *RuntimeConfig) {
-	appCtx, done := signalcontext.Wrap(
-		log.NewContextLogger(context.Background()),
-		os.Interrupt,
-		syscall.SIGTERM,
-		syscall.SIGINT,
-	)
+	appCtx, done := web.NewRuntimeContext()
 	defer done()
 
 	RunServerWithContext(appCtx, e, cfg)

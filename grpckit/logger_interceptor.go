@@ -77,7 +77,7 @@ func initCtx(ctx context.Context, fullMethodString string, start time.Time) cont
 		}
 	}
 
-	return log.NewContextLogger(ctx, fields...)
+	return log.NewLoggingContext(ctx, fields...)
 }
 
 // logic copied from https://github.com/rs/zerolog/issues/211

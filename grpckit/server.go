@@ -4,18 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
-	"syscall"
 	"time"
+
+	"github.com/adipurnama/go-toolkit/web"
 
 	"github.com/adipurnama/go-toolkit/grpckit/grpc_health_v1"
 	"github.com/adipurnama/go-toolkit/log"
-	"github.com/sethvargo/go-signalcontext"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-// RuntimeConfig is runtime configuration for grpc service with healthcheck
+// RuntimeConfig is runtime configuration for grpc service with health check
 type RuntimeConfig struct {
 	ShutdownWaitDuration time.Duration
 	Port                 int
@@ -24,20 +23,15 @@ type RuntimeConfig struct {
 	HealthCheckFunc
 }
 
-// Run grpc server with healthcheck, creating new app context
+// Run grpc server with health check, creating new app context
 func Run(s *grpc.Server, cfg *RuntimeConfig) {
-	appCtx, done := signalcontext.Wrap(
-		log.NewContextLogger(context.Background()),
-		os.Interrupt,
-		syscall.SIGTERM,
-		syscall.SIGINT,
-	)
+	appCtx, done := web.NewRuntimeContext()
 	defer done()
 
 	RunWithContext(appCtx, s, cfg)
 }
 
-// RunWithContext run grpc server with healthcheck using existing background context
+// RunWithContext run grpc server with health check using existing background context
 func RunWithContext(appCtx context.Context, s *grpc.Server, cfg *RuntimeConfig) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
 	if err != nil {
