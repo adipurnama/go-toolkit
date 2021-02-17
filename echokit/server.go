@@ -10,8 +10,13 @@ import (
 	"github.com/adipurnama/go-toolkit/web"
 
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/iancoleman/strcase"
+	echo_prometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 )
+
+// InjectedPaths is auto-registered paths for observability.
+var InjectedPaths = []string{"/actuator/info", "/actuator/health", "/metrics"}
 
 // RuntimeConfig restapi runtime config with healthcheck
 type RuntimeConfig struct {
@@ -41,6 +46,8 @@ func RunServer(e *echo.Echo, cfg *RuntimeConfig) {
 
 // RunServerWithContext run graceful restapi server with existing background context
 func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConfig) {
+	cfg.Name = strcase.ToSnake(cfg.Name)
+
 	logger := log.FromCtx(appCtx)
 	logger.AddField("restapi_name", cfg.Name)
 
@@ -81,6 +88,10 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 
 		return c.JSON(http.StatusOK, v)
 	})
+
+	// prometheus
+	p := echo_prometheus.NewPrometheus(cfg.Name, nil)
+	p.Use(e)
 
 	go func() {
 		<-appCtx.Done()

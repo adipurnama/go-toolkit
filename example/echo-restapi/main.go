@@ -7,7 +7,6 @@ import (
 	"github.com/adipurnama/go-toolkit/echokit"
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 // BuildInfo app build version, should be set from build phase
@@ -21,7 +20,7 @@ const (
 )
 
 func main() {
-	appName := "example-echo-restapi"
+	appName := "example_echo_restapi"
 
 	// setup logging
 	// development mode - logfmt
@@ -39,7 +38,21 @@ func main() {
 	}
 
 	e := echo.New()
-	e.Use(echokit.RequestIDLoggerMiddleware(), echokit.BodyDumpHandler(middleware.DefaultSkipper))
+	e.Use(
+		echokit.RequestIDLoggerMiddleware(),
+		echokit.BodyDumpHandler(func(ctx echo.Context) bool {
+			path := ctx.Request().URL.Path
+			skippedPaths := echokit.InjectedPaths
+			// skippedPaths = append(skippedPaths, "/skip-url1-1", "/skip-url-2")
+			for _, v := range skippedPaths {
+				if path == v {
+					return true
+				}
+			}
+
+			return false
+		}),
+	)
 
 	echokit.RunServer(e, &cfg)
 }

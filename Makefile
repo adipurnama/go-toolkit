@@ -19,7 +19,7 @@ fmt:
 
 lint: fmt
 	@echo -e "$(OK_COLOR)==> linting source files$(NO_COLOR)..."
-	@env golangci-lint run && golint -set_exit_status $(ALL_PACKAGES)
+	@env golangci-lint run --fix && golint -set_exit_status $(ALL_PACKAGES)
 	@echo -e "$(OK_COLOR)==> all is good$(NO_COLOR)..."
 
 generate: fmt lint
