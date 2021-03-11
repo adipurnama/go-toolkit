@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -142,10 +143,12 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 			k := stringify(cfg.stfields[i])
 			if IsSensitiveParam(k) {
 				fs[k] = RedactionString
-			} else {
-				fs[k] = cfg.stfields[i+1]
+				i++
+
+				continue
 			}
 
+			fs[k] = cfg.stfields[i+1]
 			i++
 		}
 	}
@@ -160,10 +163,12 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 			k := stringify(dynafields[i])
 			if IsSensitiveParam(k) {
 				fs[k] = RedactionString
-			} else {
-				fs[k] = dynafields[i+1]
+				i++
+
+				continue
 			}
 
+			fs[k] = dynafields[i+1]
 			i++
 		}
 	}
@@ -177,10 +182,12 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 			k := stringify(fields[i])
 			if IsSensitiveParam(k) {
 				fs[k] = RedactionString
-			} else {
-				fs[k] = fields[i+1]
+				i++
+
+				continue
 			}
 
+			fs[k] = fields[i+1]
 			i++
 		}
 	}
@@ -197,9 +204,9 @@ func stringify(val interface{}) string {
 	case bool:
 		return fmt.Sprintf("%t", v)
 	case string:
-		return v
+		return strcase.ToSnake(v)
 	default:
-		return fmt.Sprintf("%+v", v)
+		return strcase.ToSnake(fmt.Sprintf("%+v", v))
 	}
 }
 
@@ -305,6 +312,9 @@ func fileLineLogFmt(level Level) (string, bool) {
 		return "", false
 	}
 
+	files := strings.Split(file, "/")
+	file = files[len(files)-1]
+
 	result := fmt.Sprintf("%s:%d", file, line)
 
 	cwd, err := os.Getwd()
@@ -323,6 +333,9 @@ func stdFileLineLogFmt(level Level) (string, bool) {
 	if !ok {
 		return "", false
 	}
+
+	files := strings.Split(file, "/")
+	file = files[len(files)-1]
 
 	result := fmt.Sprintf("%s:%d", file, line)
 

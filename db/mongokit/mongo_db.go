@@ -3,6 +3,7 @@ package mongokit
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 
 	"github.com/adipurnama/go-toolkit/db"
@@ -11,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// NewMongoDBClient returns new mongodb client using the go mongo-driver
+// NewMongoDBClient returns new mongodb client using the go mongo-driver.
 func NewMongoDBClient(opt *db.Option, authDB string) (*mongo.Database, error) {
 	connURL := &url.URL{
 		Scheme: "mongodb",
@@ -40,6 +41,8 @@ func NewMongoDBClient(opt *db.Option, authDB string) (*mongo.Database, error) {
 	if err = client.Connect(ctx); err != nil {
 		return nil, errors.Wrap(err, "mongokit - client.Connect")
 	}
+
+	log.Println("successfully connected to mongo", connURL.Host)
 
 	return client.Database(opt.DatabaseName), nil
 }

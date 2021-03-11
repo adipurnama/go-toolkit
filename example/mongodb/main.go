@@ -13,8 +13,9 @@ type doc struct {
 	Desc string `bson:"desc"`
 }
 
+// setup, run local mongodb by:
+// docker run -it -v mongodata:/data/db -p 27017:27017 --name mongodb -d mongo.
 func main() {
-	// docker run -it -v mongodata:/data/db -p 27017:27017 --name mongodb -d mongo
 	opt, err := db.NewDatabaseOption("127.0.0.1", 27017, "root", "example", "sample_db", nil)
 	if err != nil {
 		log.Fatal("error found while building mongodb connection ", err)

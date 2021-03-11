@@ -32,7 +32,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			}
 			return nil
 		}
-		mid := echokit.RequestIDLoggerMiddleware()
+		mid := echokit.RequestIDLoggerMiddleware(&echokit.RuntimeConfig{})
 		handler := mid(checkerHandler)
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -43,6 +43,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+
 	t.Run("should preserve existing requestID and traceID", func(t *testing.T) {
 		traceID := "bhahahah"
 		requestID := "mehehehe"
@@ -57,7 +58,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			}
 			return nil
 		}
-		mid := echokit.RequestIDLoggerMiddleware()
+		mid := echokit.RequestIDLoggerMiddleware(&echokit.RuntimeConfig{})
 		handler := mid(checkerHandler)
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

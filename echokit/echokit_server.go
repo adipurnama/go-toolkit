@@ -7,24 +7,30 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/adipurnama/go-toolkit/web"
-
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/web"
+	validator "github.com/go-playground/validator/v10"
 	"github.com/iancoleman/strcase"
 	echo_prometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 )
 
-// InjectedPaths is auto-registered paths for observability.
-var InjectedPaths = []string{"/actuator/info", "/actuator/health", "/metrics"}
+const (
+	defaultInfoPath   = "/actuator/info"
+	defaultHealthPath = "/actuator/health"
+	defaultReqTimeout = 7 * time.Second
+)
 
-// RuntimeConfig restapi runtime config with healthcheck
+// RuntimeConfig defines echo REST API runtime config with healthcheck.
 type RuntimeConfig struct {
-	ShutdownWaitDuration    time.Duration
-	ShutdownTimeoutDuration time.Duration
 	Port                    int
 	Name                    string
 	BuildInfo               string
+	ShutdownWaitDuration    time.Duration
+	ShutdownTimeoutDuration time.Duration
+	RequestTimeoutConfig    *TimeoutConfig
+	HealthCheckPath         string
+	InfoCheckPath           string
 	HealthCheckFunc
 }
 
@@ -33,10 +39,10 @@ type healthStatus struct {
 	Status  string `json:"status"`
 }
 
-// HealthCheckFunc is healthcheck interface func
+// HealthCheckFunc is healthcheck interface func.
 type HealthCheckFunc func(ctx context.Context) error
 
-// RunServer run graceful restapi server
+// RunServer run graceful restapi server.
 func RunServer(e *echo.Echo, cfg *RuntimeConfig) {
 	appCtx, done := web.NewRuntimeContext()
 	defer done()
@@ -45,18 +51,28 @@ func RunServer(e *echo.Echo, cfg *RuntimeConfig) {
 }
 
 // RunServerWithContext run graceful restapi server with existing background context
+// provides default '/actuator/health' as healthcheck endpoint
+// provides '/metrics' as prometheus metrics endpoint.
+// set echo.Validator using `web.Validator` from `web` package.
 func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConfig) {
 	cfg.Name = strcase.ToSnake(cfg.Name)
 
 	logger := log.FromCtx(appCtx)
-	logger.AddField("restapi_name", cfg.Name)
 
 	hs := &healthStatus{
 		serving: true,
 	}
 
 	e.HideBanner = true
-	e.GET("/actuator/health", func(c echo.Context) error {
+	e.Validator = web.NewValidator(validator.New())
+
+	e.Use(TimeoutMiddleware(cfg.RequestTimeoutConfig))
+
+	if cfg.HealthCheckPath == "" {
+		cfg.HealthCheckPath = defaultHealthPath
+	}
+
+	e.GET(cfg.HealthCheckPath, func(c echo.Context) error {
 		if !hs.serving {
 			hs.Status = "OUT_OF_SERVICE"
 
@@ -80,7 +96,12 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 
 		return c.JSON(http.StatusOK, hs)
 	})
-	e.GET("/actuator/info", func(c echo.Context) error {
+
+	if cfg.InfoCheckPath == "" {
+		cfg.InfoCheckPath = defaultInfoPath
+	}
+
+	e.GET(cfg.InfoCheckPath, func(c echo.Context) error {
 		var v struct {
 			Version string `json:"version"`
 		}

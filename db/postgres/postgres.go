@@ -10,6 +10,7 @@ import (
 
 	"github.com/adipurnama/go-toolkit/db"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 const intervalKeepAlive = 5 * time.Second
@@ -29,7 +30,7 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 
 	db, err := sqlx.Open("postgres", connURL.String())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed open connection to postgres")
 	}
 
 	db.SetMaxIdleConns(opt.ConnectionOption.MaxIdle)
@@ -40,6 +41,8 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 	defer cancel()
 
 	_ = db.QueryRowContext(ctx, "SELECT 1")
+
+	log.Println("successfully connected to postgres", connURL.Host)
 
 	go doKeepAliveConnection(db, opt.DatabaseName, intervalKeepAlive)
 

@@ -23,7 +23,7 @@ type Option struct {
 	*ConnectionOption
 }
 
-// ConnectionOption is db connection option
+// ConnectionOption is db connection option.
 type ConnectionOption struct {
 	MaxIdle        int
 	MaxLifetime    time.Duration
@@ -31,7 +31,7 @@ type ConnectionOption struct {
 	ConnectTimeout time.Duration
 }
 
-// DefaultConnectionOption returns sensible conn setting
+// DefaultConnectionOption returns sensible conn setting.
 func DefaultConnectionOption() *ConnectionOption {
 	return &ConnectionOption{
 		MaxIdle:        defaultMaxIdle,

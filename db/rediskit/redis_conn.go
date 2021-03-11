@@ -7,10 +7,11 @@ import (
 
 	"github.com/adipurnama/go-toolkit/db"
 	goredis "github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 )
 
 // NewRedisConnection returns new redis client
-// based on db Options
+// based on db Options.
 func NewRedisConnection(option *db.Option) (*goredis.Client, error) {
 	opts := goredis.Options{
 		Addr:         fmt.Sprintf("%s:%d", option.Host, option.Port),
@@ -26,10 +27,10 @@ func NewRedisConnection(option *db.Option) (*goredis.Client, error) {
 
 	_, err := rClient.Ping(context.Background()).Result()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed connecting to redis")
 	}
 
-	log.Println("successfully connected to redis")
+	log.Println("successfully connected to redis", opts.Addr)
 
 	return rClient, nil
 }

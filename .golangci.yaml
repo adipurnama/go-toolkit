@@ -4,26 +4,70 @@ linters:
     - bodyclose
     - deadcode
     - errcheck
+    - errorlint
     - exportloopref
+    - gocognit
     - goconst
     - gocritic
     - gocyclo
+    - godot
     - goerr113
     - gofmt
     - goimports
-    - golint
     - gomnd
     - goprintffuncname
     - gosec
     - gosimple
     - govet
     - ineffassign
-    - interfacer
     - misspell
     - nakedret
+    - noctx
+    - prealloc
     - rowserrcheck
     - stylecheck
+    - revive
     - testpackage
+    - unconvert
     - unparam
     - vet
+    - wrapcheck
     - wsl
+linters-settings:
+  revive:
+    # Installation: go get -u github.com/mgechev/revive
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: atomic
+      - name: bare-return
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: early-return
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: errorf
+      - name: exported
+      - name: if-return
+      - name: imports-blacklist
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unconditional-recursion
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unexported-return
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id

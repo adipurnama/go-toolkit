@@ -13,22 +13,26 @@ import (
 )
 
 const (
-	port  = 30331
-	waitS = 3 * time.Second
+	port       = 30331
+	wait       = 3 * time.Second
+	isProdMode = false
 )
 
 func main() {
-	appName := "example-grpc-app"
+	appName := "example_grpc_app"
 
 	// setup logging
-	// development mode - logfmt
-	_ = log.NewDevLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
-	// production mode - json
-	// _ = log.NewLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
+	if isProdMode {
+		// production mode - json
+		_ = log.NewLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
+	} else {
+		// development mode - logfmt
+		_ = log.NewDevLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
+	}
 
 	cfg := grpckit.RuntimeConfig{
 		Port:                 port,
-		ShutdownWaitDuration: waitS,
+		ShutdownWaitDuration: wait,
 		Name:                 appName,
 		EnableReflection:     true,
 		HealthCheckFunc:      healthCheck(),

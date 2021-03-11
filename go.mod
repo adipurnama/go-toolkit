@@ -3,6 +3,7 @@ module github.com/adipurnama/go-toolkit
 go 1.14
 
 require (
+	github.com/HereMobilityDevelopers/mediary v1.0.0
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/alicebob/miniredis v2.5.0+incompatible
 	github.com/go-playground/validator/v10 v10.2.0
@@ -21,6 +22,8 @@ require (
 	github.com/sethvargo/go-signalcontext v0.1.0
 	github.com/stretchr/testify v1.6.1
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
+	go.elastic.co/apm v1.11.0
+	go.elastic.co/apm/module/apmechov4 v1.11.0
 	go.mongodb.org/mongo-driver v1.4.4
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0

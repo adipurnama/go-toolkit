@@ -1,8 +1,10 @@
 package helper
 
-import "github.com/pkg/errors"
+import (
+	"github.com/adipurnama/go-toolkit/errors"
+)
 
 // ShouldBeError ...
 func ShouldBeError() error {
-	return errors.Wrap(GuaranteedErr(), "should be error")
+	return errors.WrapFunc(GuaranteedErr(), "info", "two.go")
 }

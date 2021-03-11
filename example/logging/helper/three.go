@@ -1,8 +1,12 @@
 package helper
 
-import "github.com/pkg/errors"
+import (
+	"github.com/adipurnama/go-toolkit/errors"
+)
+
+var errGuaranteed = errors.New("guarantee error")
 
 // GuaranteedErr ...
 func GuaranteedErr() error {
-	return errors.Wrap(errors.New("guarantee error"), "this function from three.go will absolutely contains error")
+	return errors.WrapFuncMsg(errGuaranteed, "at three.go", "reason", "custom_reason")
 }

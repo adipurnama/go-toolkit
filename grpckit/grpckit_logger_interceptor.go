@@ -15,7 +15,7 @@ import (
 
 const keyRequestID = "x-request-id"
 
-// LoggerInterceptor create server logger interceptor
+// LoggerInterceptor create server logger interceptor.
 func LoggerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		service := path.Dir(info.FullMethod)[1:]
@@ -41,7 +41,8 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 
 		if err != nil {
 			log.FromCtx(newCtx).Error(err, "grpc request completed", fields...)
-			return
+
+			return nil, err
 		}
 
 		switch codeToLogLevel(code) {
@@ -53,7 +54,7 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 			log.FromCtx(newCtx).Info("gRPC request completed", fields...)
 		}
 
-		return
+		return resp, nil
 	}
 }
 

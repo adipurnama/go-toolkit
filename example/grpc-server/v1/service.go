@@ -7,12 +7,12 @@ import (
 
 var _ ExampleServiceServer = (*Service)(nil)
 
-// Service - ExampleServiceServer example
+// Service - ExampleServiceServer example.
 type Service struct {
 }
 
-// Greet - ExampleServiceServer impl
-func (s *Service) Greet(ctx context.Context, req *HelloRequest) (*HelloResponse, error) {
+// Greet - ExampleServiceServer impl.
+func (s *Service) Greet(_ context.Context, req *HelloRequest) (*HelloResponse, error) {
 	return &HelloResponse{
 		Greeting: fmt.Sprintf("Hello %s", req.Name),
 	}, nil

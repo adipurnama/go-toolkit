@@ -172,7 +172,7 @@ func Set(l *Logger) {
 // Can be used chained with NewLogger to create a new one,
 // set it up as package default logger and get it for use in one step.
 // i.e:
-// logger := log.NewLogger(log.Debug, "name", "version", "revision").Set()
+// logger := log.NewLogger(log.Debug, "name", "version", "revision").Set().
 func (l *Logger) Set() *Logger {
 	defaultLogger = l
 	return defaultLogger
