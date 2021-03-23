@@ -17,7 +17,7 @@ const (
 )
 
 func main() {
-	_ = log.NewDevLogger(log.LevelDebug, "sample-httpclient", nil, nil).Set()
+	_ = log.NewDevLogger(nil, nil).Set()
 
 	ctx := context.Background()
 

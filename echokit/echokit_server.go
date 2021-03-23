@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	stdLog "log"
 	"net/http"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/iancoleman/strcase"
 	echo_prometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 const (
@@ -64,9 +66,18 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 	}
 
 	e.HideBanner = true
-	e.Validator = web.NewValidator(validator.New())
+	validator := validator.New()
 
-	e.Use(TimeoutMiddleware(cfg.RequestTimeoutConfig))
+	if cfg.RequestTimeoutConfig == nil {
+		cfg.RequestTimeoutConfig = &TimeoutConfig{
+			Timeout: defaultReqTimeout,
+			Skipper: middleware.DefaultSkipper,
+		}
+	}
+
+	// request validator setup
+	e.Use(ValidatorTranslatorMiddleware(validator), TimeoutMiddleware(cfg.RequestTimeoutConfig))
+	e.Validator = web.NewValidator(validator)
 
 	if cfg.HealthCheckPath == "" {
 		cfg.HealthCheckPath = defaultHealthPath
@@ -131,9 +142,24 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 		}
 	}()
 
+	// error fallback handler
+	e.HTTPErrorHandler = loggerHTTPErrorHandler(e.HTTPErrorHandler)
+
+	PrintRoutes(e)
+
+	// start server
 	logger.Info("serving REST HTTP server", "port", cfg.Port)
 
 	if err := e.Start(fmt.Sprintf(":%d", cfg.Port)); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error(err, "starting http server")
+	}
+}
+
+// PrintRoutes prints *echo.Echo routes.
+func PrintRoutes(e *echo.Echo) {
+	stdLog.Println("=== initializing http routes")
+
+	for _, r := range e.Routes() {
+		stdLog.Printf("===> %s %s %s", r.Method, r.Path, r.Name)
 	}
 }

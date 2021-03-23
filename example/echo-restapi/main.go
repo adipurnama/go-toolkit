@@ -1,14 +1,16 @@
 package main
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/adipurnama/go-toolkit/echokit"
+	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/handler"
+	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/repository"
+	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/service"
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"go.elastic.co/apm/module/apmechov4"
 )
 
 // BuildInfo app build version, should be set from build phase
@@ -16,12 +18,11 @@ import (
 var BuildInfo = "NOT_SET"
 
 const (
-	dPort           = 8088
-	dWaitDur        = 3 * time.Second
-	dTimeoutDur     = 4 * time.Second
-	reqTimeout      = 5 * time.Second
-	longProcessTime = 10 * time.Second
-	isProdMode      = false
+	dPort       = 8088
+	dWaitDur    = 1 * time.Second
+	dTimeoutDur = 4 * time.Second
+	reqTimeout  = 15 * time.Second
+	isProdMode  = false
 )
 
 func main() {
@@ -31,17 +32,22 @@ func main() {
 	// setup logging
 	if isProdMode {
 		// production mode - json
-		_ = log.NewLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
+		_ = log.NewLogger(log.LevelDebug, appName, nil, nil, "additionalKey1", "additional_value1").Set()
 	} else {
 		// development mode - logfmt
-		_ = log.NewDevLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
+		_ = log.NewDevLogger(nil, nil, "default_key1", "default_value1").Set()
 	}
+
+	// dependencies
+	db := repository.DummyDB{}
+	repo := repository.NewUserRepository(&db)
+	svc := service.NewService(repo)
 
 	cfg := echokit.RuntimeConfig{
 		Port:                    dPort,
 		ShutdownWaitDuration:    dWaitDur,
 		ShutdownTimeoutDuration: dTimeoutDur,
-		HealthCheckFunc:         healthCheck(),
+		HealthCheckFunc:         handler.HealthCheck(&db),
 		Name:                    appName,
 		BuildInfo:               BuildInfo,
 		RequestTimeoutConfig: &echokit.TimeoutConfig{
@@ -50,71 +56,30 @@ func main() {
 	}
 
 	e := echo.New()
+	e.HTTPErrorHandler = handler.ErrorHandler
 	e.Use(
 		middleware.Recover(),
 		echokit.RequestIDLoggerMiddleware(&cfg),
-		echokit.BodyDumpHandler(func(ctx echo.Context) bool {
-			path := ctx.Request().URL.Path
-			skippedPaths := []string{"/health", "/metrics"}
+		apmechov4.Middleware(),
+		// echokit.BodyDumpHandler(func(ctx echo.Context) bool {
+		// 	path := ctx.Request().URL.Path
+		// 	skippedPaths := []string{"/health", "/metrics"}
 
-			for _, v := range skippedPaths {
-				if path == v {
-					return true
-				}
-			}
+		// 	for _, v := range skippedPaths {
+		// 		if path == v {
+		// 			return true
+		// 		}
+		// 	}
 
-			return false
-		}),
+		// 	return false
+		// }),
 	)
 
 	// routes
-	e.POST("/users", createUser)
-	e.GET("/longsleep", longOperation)
+	e.POST("/users", handler.CreateUser(svc))
+	e.GET("/users/:id", handler.GetUser(svc))
+	e.GET("/longsleep", handler.LongOperation)
 
+	// run echo-http server
 	echokit.RunServer(e, &cfg)
-}
-
-func healthCheck() echokit.HealthCheckFunc {
-	return func(ctx context.Context) error {
-		return nil
-	}
-}
-
-func createUser(ctx echo.Context) error {
-	type User struct {
-		Name string `validate:"required" json:"name"`
-	}
-
-	var u User
-
-	if err := ctx.Bind(u); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	if err := ctx.Validate(u); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	return ctx.JSON(http.StatusAccepted, u)
-}
-
-func longOperation(ctx echo.Context) error {
-	rCtx := ctx.Request().Context()
-
-	now := time.Now()
-
-	defer func() {
-		log.FromCtx(rCtx).Debug("request ends", "elapsed_time_ms", time.Since(now).Milliseconds())
-	}()
-
-	// usually, we call external system with context as parameter
-	// e.g. db.QueryRow(ctx, ...), redis.WithContext(ctx).Get(key).Result(), etc..
-	// this example using time.Sleep to simulate long running process
-	// since it doesn't support ctx param, we use select-case
-	select {
-	case <-rCtx.Done():
-		return echo.NewHTTPError(http.StatusRequestTimeout, "request timeout")
-	case <-time.After(longProcessTime):
-		return ctx.String(http.StatusOK, "OK. Done.")
-	}
 }

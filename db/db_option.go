@@ -2,8 +2,9 @@
 package db
 
 import (
-	"errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -46,7 +47,7 @@ var errInvalidDBSource = errors.New("invalid datasource host | port")
 // NewDatabaseOption - default factory method.
 func NewDatabaseOption(host string, port int, username, password, dbName string, conn *ConnectionOption) (*Option, error) {
 	if host == "" || port == 0 {
-		return nil, errInvalidDBSource
+		return nil, errors.Wrapf(errInvalidDBSource, "db: host=%s port=%d", host, port)
 	}
 
 	if conn == nil || conn.MaxOpen == 0 || conn.MaxOpen < conn.MaxIdle || conn.ConnectTimeout == 0 {

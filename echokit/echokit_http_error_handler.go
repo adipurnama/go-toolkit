@@ -3,16 +3,13 @@ package echokit
 import (
 	"net/http"
 
-	"github.com/adipurnama/go-toolkit/errors"
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/web"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 )
 
-// HTTPErrorResponseWriter to write JSON / HTML response for given error type(s).
-type HTTPErrorResponseWriter func(err error, ctx echo.Context)
-
-// LoggerHTTPErrorHandler logs error from handler's downstream call.
-func LoggerHTTPErrorHandler(w HTTPErrorResponseWriter) echo.HTTPErrorHandler {
+func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 	return func(err error, ctx echo.Context) {
 		if err == nil {
 			return
@@ -27,42 +24,51 @@ func LoggerHTTPErrorHandler(w HTTPErrorResponseWriter) echo.HTTPErrorHandler {
 
 		resp := ctx.Response()
 
-		if !previouslyCommitted && ctx.Response().Committed {
+		var errEchoHTTP *echo.HTTPError
+		if ok := errors.As(err, &errEchoHTTP); ok && errEchoHTTP.Internal != nil {
+			err = errEchoHTTP.Internal
+		}
+
+		if !previouslyCommitted && resp.Committed {
 			log.FromCtx(ctx.Request().Context()).Error(err, "request completed with error",
 				"path", ctx.Path(),
 				"status_code", resp.Status,
-				"content_type", resp.Header().Get("content-type"),
 			)
 
 			return
 		}
 
-		if !ctx.Response().Committed {
-			code := http.StatusInternalServerError
-			msg := "request completed but not handled yet"
-
-			var e *echo.HTTPError
-
-			if ok := errors.As(err, &e); ok {
-				code = e.Code
-				_ = ctx.JSON(e.Code, e)
-			} else {
-				_ = ctx.JSON(http.StatusInternalServerError, echo.HTTPError{
-					Code:     http.StatusInternalServerError,
-					Message:  errors.Cause(err).Error(),
-					Internal: err,
-				})
-			}
-
-			if code != http.StatusInternalServerError {
-				msg = "http error found"
-			}
-
-			log.FromCtx(ctx.Request().Context()).
-				Error(err, msg,
-					"path", ctx.Path(),
-					"status_code", ctx.Response().Status,
-				)
+		if ctx.Response().Committed {
+			return
 		}
+
+		code := http.StatusInternalServerError
+		msg := "request completed but not handled yet"
+
+		var httpErr *web.HTTPError
+
+		if errEchoHTTP != nil {
+			code = errEchoHTTP.Code
+			_ = ctx.JSON(errEchoHTTP.Code, errEchoHTTP)
+		} else if ok := errors.As(err, &httpErr); ok {
+			code = httpErr.Code
+			_ = ctx.JSON(httpErr.Code, httpErr)
+		} else {
+			_ = ctx.JSON(http.StatusInternalServerError, echo.HTTPError{
+				Code:     http.StatusInternalServerError,
+				Message:  errors.Cause(err).Error(),
+				Internal: err,
+			})
+		}
+
+		if code != http.StatusInternalServerError {
+			msg = "http error found"
+		}
+
+		log.FromCtx(ctx.Request().Context()).
+			Error(err, msg,
+				"path", ctx.Path(),
+				"status_code", ctx.Response().Status,
+			)
 	}
 }

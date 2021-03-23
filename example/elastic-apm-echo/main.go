@@ -7,11 +7,10 @@ import (
 	"strings"
 
 	"github.com/adipurnama/go-toolkit/echokit"
-	"github.com/adipurnama/go-toolkit/errors"
 	"github.com/adipurnama/go-toolkit/log"
-	"github.com/adipurnama/go-toolkit/runtimekit"
+	"github.com/adipurnama/go-toolkit/tracer"
 	"github.com/labstack/echo/v4"
-	"go.elastic.co/apm"
+	"github.com/pkg/errors"
 	"go.elastic.co/apm/module/apmechov4"
 )
 
@@ -25,17 +24,22 @@ const (
 type ServiceDomainError error
 
 var (
-	errDataNotFound       ServiceDomainError = errors.New("data not found")
 	errInsufficientMana   ServiceDomainError = errors.New("not enough mana")
 	errInvalidRequest     ServiceDomainError = errors.New("invalid request")
 	errServiceUnavailable ServiceDomainError = errors.New("service unavailable")
 )
 
+type errDataIDNotFound int
+
+func (e errDataIDNotFound) Error() string {
+	return fmt.Sprintf("data with ID %d not found", e)
+}
+
 func main() {
 	if isProdMode {
 		_ = log.NewLogger(log.LevelDebug, appName, nil, nil).Set()
 	} else {
-		_ = log.NewDevLogger(log.LevelDebug, appName, nil, nil).Set()
+		_ = log.NewDevLogger(nil, nil).Set()
 	}
 
 	eCfg := echokit.RuntimeConfig{
@@ -53,7 +57,7 @@ func main() {
 		apmechov4.Middleware(),
 	)
 
-	e.HTTPErrorHandler = echokit.LoggerHTTPErrorHandler(errorResponseWriter)
+	e.HTTPErrorHandler = errorResponseWriter
 
 	e.GET("/errors", testErrorHandler)
 	e.GET("/success", testSuccess)
@@ -69,20 +73,25 @@ func errorResponseWriter(err error, c echo.Context) {
 		Message: "error nih ye",
 	}
 
-	var e ServiceDomainError
+	var (
+		e         ServiceDomainError
+		eNotFound *errDataIDNotFound
+	)
 
 	if ok := errors.As(err, &e); ok {
-		switch e {
-		case errDataNotFound:
-			_ = c.JSON(res.Code, res)
-		case errInsufficientMana:
-			res.Message = e.Error()
-			_ = c.JSON(http.StatusBadRequest, res)
-		case errServiceUnavailable:
+		res.Message = e.Error()
+
+		if errors.Is(err, errServiceUnavailable) {
 			res.Code = http.StatusBadGateway
-			_ = c.JSON(res.Code, res)
 		}
 	}
+
+	if ok := errors.As(err, &eNotFound); ok {
+		res.Code = http.StatusNotFound
+		res.Message = eNotFound.Error()
+	}
+
+	_ = c.JSON(res.Code, res)
 }
 
 type response struct {
@@ -91,46 +100,38 @@ type response struct {
 }
 
 func testErrorHandler(ctx echo.Context) error {
-	tx := apm.TransactionFromContext(ctx.Request().Context())
-
-	span := tx.StartSpan(runtimekit.CallerName(), "handler", nil)
+	span := echokit.HandlerSpan(ctx)
 	defer span.End()
 
 	err := svcErrFunc(ctx.Request().Context())
 	if err != nil {
-		return errors.WrapFunc(err)
+		return err
 	}
 
 	return ctx.String(http.StatusOK, "ok")
 }
 
 func testPayment(ctx echo.Context) error {
-	tx := apm.TransactionFromContext(ctx.Request().Context())
-
-	span := tx.StartSpan(runtimekit.CallerName(), "handler", nil)
+	span := echokit.HandlerSpan(ctx)
 	defer span.End()
 
-	return errInsufficientMana
+	return errors.WithStack(errInsufficientMana)
 }
 
 func testSuccess(ctx echo.Context) error {
-	tx := apm.TransactionFromContext(ctx.Request().Context())
-
-	span := tx.StartSpan(runtimekit.CallerName(), "handler", nil)
+	span := echokit.HandlerSpan(ctx)
 	defer span.End()
 
 	return ctx.String(http.StatusOK, "ok")
 }
 
 func testLoginErrorDetailedInfo(ctx echo.Context) error {
-	tx := apm.TransactionFromContext(ctx.Request().Context())
-
-	span := tx.StartSpan(runtimekit.CallerName(), "handler", nil)
+	span := echokit.HandlerSpan(ctx)
 	defer span.End()
 
 	phone := ctx.QueryParam("phone")
 	if strings.ReplaceAll(phone, " ", "") == "" {
-		return errInvalidRequest
+		return errors.WithStack(errInvalidRequest)
 	}
 
 	if err := svcLogin(ctx.Request().Context(), phone); err != nil {
@@ -143,26 +144,33 @@ func testLoginErrorDetailedInfo(ctx echo.Context) error {
 	return ctx.String(http.StatusAccepted, "Success")
 }
 
-func svcLogin(_ context.Context, phone string) error {
-	return errors.WrapFunc(errServiceUnavailable, "phone", phone)
+func svcLogin(ctx context.Context, phone string) error {
+	span := tracer.ServiceFuncSpan(ctx)
+	defer span.End()
+
+	// err := errors.WithStack(errServiceUnavailable)
+	// err := errServiceUnavailable
+	// err := errors.Wrap(errServiceUnavailable, "gateway timeout")
+
+	// return errors.Wrapf(err, "login with phone %s", phone)
+	// return errServiceUnavailable
+	return errors.Wrapf(errServiceUnavailable, "login with phone %s", phone)
 }
 
 func svcErrFunc(ctx context.Context) error {
-	tx := apm.TransactionFromContext(ctx)
-
-	span := tx.StartSpan(runtimekit.CallerName(), "service", nil)
+	span := tracer.ServiceFuncSpan(ctx)
 	defer span.End()
 
 	err := repoErrFunc(ctx)
 
-	return errors.WrapFuncMsg(err, "got error from repo")
+	return err
 }
 
 func repoErrFunc(ctx context.Context) error {
-	tx := apm.TransactionFromContext(ctx)
-
-	span := tx.StartSpan(runtimekit.CallerName(), "repo", nil)
+	span := tracer.RepositoryFuncSpan(ctx)
 	defer span.End()
 
-	return errors.WrapFunc(errDataNotFound)
+	uID := 10
+
+	return errors.WithStack(errDataIDNotFound(uID))
 }

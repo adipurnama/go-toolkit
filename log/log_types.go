@@ -25,6 +25,7 @@ type Logger struct {
 	ErrLog zerolog.Logger
 	// Dynamic fields
 	dynafields []interface{}
+	logFmt     bool
 }
 
 type config struct {

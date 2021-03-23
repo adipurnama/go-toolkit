@@ -31,7 +31,7 @@ linters:
     - unconvert
     - unparam
     - vet
-    - wrapcheck
+    # - wrapcheck
     - wsl
 linters-settings:
   revive:

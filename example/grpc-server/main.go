@@ -27,7 +27,7 @@ func main() {
 		_ = log.NewLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
 	} else {
 		// development mode - logfmt
-		_ = log.NewDevLogger(log.LevelDebug, appName, nil, nil, "default_key1", "default_value1").Set()
+		_ = log.NewDevLogger(nil, nil, "default_key1", "default_value1").Set()
 	}
 
 	cfg := grpckit.RuntimeConfig{

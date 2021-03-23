@@ -3,21 +3,23 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/url"
 	"time"
 
 	"github.com/adipurnama/go-toolkit/db"
-	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"go.elastic.co/apm/module/apmsql"
+	_ "go.elastic.co/apm/module/apmsql/pq" // use wrapped postgres driver
 )
 
 const intervalKeepAlive = 5 * time.Second
 
 // NewPostgresDatabase - create & validate postgres connection given certain db.Option
 // the caller have the responsibility to close the *sqlx.DB when succeed.
-func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
+func NewPostgresDatabase(opt *db.Option) (*sql.DB, error) {
 	connURL := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(opt.Username, opt.Password),
@@ -28,9 +30,9 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 	q.Add("sslmode", "disable")
 	connURL.RawQuery = q.Encode()
 
-	db, err := sqlx.Open("postgres", connURL.String())
+	db, err := apmsql.Open("postgres", connURL.String())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed open connection to postgres")
+		return nil, errors.Wrap(err, "postgres: failed to open connection")
 	}
 
 	db.SetMaxIdleConns(opt.ConnectionOption.MaxIdle)
@@ -49,11 +51,16 @@ func NewPostgresDatabase(opt *db.Option) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func doKeepAliveConnection(db *sqlx.DB, dbName string, interval time.Duration) {
+func doKeepAliveConnection(db *sql.DB, dbName string, interval time.Duration) {
 	for {
 		rows, err := db.Query("SELECT 1")
 		if err != nil {
-			log.Printf("db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", err, dbName)
+			log.Printf("ERROR db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", err, dbName)
+			return
+		}
+
+		if rows.Err() != nil {
+			log.Printf("ERROR db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", rows.Err(), dbName)
 			return
 		}
 
@@ -61,7 +68,7 @@ func doKeepAliveConnection(db *sqlx.DB, dbName string, interval time.Duration) {
 			var i int
 
 			_ = rows.Scan(&i)
-			log.Printf("db.doKeepAliveConnection counter=%d db_name=%s stats=%v\n", i, dbName, db.Stats())
+			log.Printf("ERROR db.doKeepAliveConnection counter=%d db_name=%s stats=%v\n", i, dbName, db.Stats())
 		}
 
 		_ = rows.Close()

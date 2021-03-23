@@ -26,6 +26,9 @@ var (
 )
 
 func init() {
+	zerolog.ErrorStackMarshaler = marshalStack
+	zerolog.ErrorStackFieldName = "stacktrace"
+
 	defaultLogger = NewLogger(LevelDebug, "logger", nil, nil)
 }
 
@@ -84,7 +87,15 @@ func (l Logger) Warn(msg string, meta ...interface{}) {
 
 // Error logs error messages.
 func (l Logger) Error(err error, msg string, meta ...interface{}) {
+	if defaultLogger.logFmt {
+		stdLog.Println("-----------------------")
+	}
+
 	l.errorf(err, msg, meta)
+
+	if defaultLogger.logFmt {
+		stdLog.Println("-----------------------")
+	}
 }
 
 func (l Logger) debugf(message string, fields []interface{}) {
@@ -118,7 +129,7 @@ func (l Logger) warnf(message string, fields []interface{}) {
 }
 
 func (l Logger) errorf(err error, message string, fields []interface{}) {
-	le := l.ErrLog.Error()
+	le := l.ErrLog.Error().Stack()
 	appendKeyValues(le, l.dynafields, fields)
 	le.Err(err)
 	le.Msg(message)

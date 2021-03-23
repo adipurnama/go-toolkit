@@ -36,11 +36,17 @@ func CallerLineInfo(skip int) string {
 	return errFnLineInfo
 }
 
-// CallerName returns this functions caller's name
+// FunctionName returns this function caller's name
 // useful to wrap span, trace, context info
-// e.g. trace.Start(ctx, runtimekit.CallerName()).
-func CallerName() string {
-	pc, _, _, ok := runtime.Caller(1)
+// e.g. trace.Start(ctx, runtimekit.FunctionName()).
+func FunctionName() string {
+	skipCount := 2
+	return SkippedFunctionName(skipCount)
+}
+
+// SkippedFunctionName returns function caller's name with skipped count.
+func SkippedFunctionName(skip int) string {
+	pc, _, _, ok := runtime.Caller(skip)
 	if !ok {
 		return ""
 	}

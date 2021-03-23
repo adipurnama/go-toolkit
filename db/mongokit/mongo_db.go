@@ -8,6 +8,7 @@ import (
 
 	"github.com/adipurnama/go-toolkit/db"
 	"github.com/pkg/errors"
+	"go.elastic.co/apm/module/apmmongo"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -29,17 +30,18 @@ func NewMongoDBClient(opt *db.Option, authDB string) (*mongo.Database, error) {
 	clientOptions.SetConnectTimeout(opt.ConnectionOption.ConnectTimeout)
 	clientOptions.SetMaxConnIdleTime(opt.ConnectionOption.MaxLifetime)
 	clientOptions.SetMaxPoolSize(uint64(opt.ConnectionOption.MaxOpen))
+	clientOptions.SetMonitor(apmmongo.CommandMonitor())
 
 	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
-		return nil, errors.Wrap(err, "mongokit - mongo.NewClient")
+		return nil, errors.Wrap(err, "mongokit: cannot create new mongo client")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), opt.ConnectionOption.ConnectTimeout)
 	defer cancel()
 
 	if err = client.Connect(ctx); err != nil {
-		return nil, errors.Wrap(err, "mongokit - client.Connect")
+		return nil, errors.Wrap(err, "mongokit: cannot connect to client")
 	}
 
 	log.Println("successfully connected to mongo", connURL.Host)
