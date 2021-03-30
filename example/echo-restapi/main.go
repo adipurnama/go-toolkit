@@ -4,13 +4,12 @@ import (
 	"time"
 
 	"github.com/adipurnama/go-toolkit/echokit"
+	"github.com/adipurnama/go-toolkit/echokit/echoapmkit"
 	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/handler"
 	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/repository"
 	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/service"
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"go.elastic.co/apm/module/apmechov4"
 )
 
 // BuildInfo app build version, should be set from build phase
@@ -47,6 +46,7 @@ func main() {
 		Port:                    dPort,
 		ShutdownWaitDuration:    dWaitDur,
 		ShutdownTimeoutDuration: dTimeoutDur,
+		HealthCheckPath:         "/healthz",
 		HealthCheckFunc:         handler.HealthCheck(&db),
 		Name:                    appName,
 		BuildInfo:               BuildInfo,
@@ -58,22 +58,26 @@ func main() {
 	e := echo.New()
 	e.HTTPErrorHandler = handler.ErrorHandler
 	e.Use(
-		middleware.Recover(),
+		echoapmkit.ElasticAPMMiddleware(),
 		echokit.RequestIDLoggerMiddleware(&cfg),
-		apmechov4.Middleware(),
-		// echokit.BodyDumpHandler(func(ctx echo.Context) bool {
-		// 	path := ctx.Request().URL.Path
-		// 	skippedPaths := []string{"/health", "/metrics"}
-
-		// 	for _, v := range skippedPaths {
-		// 		if path == v {
-		// 			return true
-		// 		}
-		// 	}
-
-		// 	return false
-		// }),
 	)
+
+	if !isProdMode {
+		e.Use(
+			echokit.BodyDumpHandler(func(ctx echo.Context) bool {
+				path := ctx.Request().URL.Path
+				skippedPaths := []string{"/healthz", "/metrics"}
+
+				for _, v := range skippedPaths {
+					if path == v {
+						return true
+					}
+				}
+
+				return false
+			}),
+		)
+	}
 
 	// routes
 	e.POST("/users", handler.CreateUser(svc))

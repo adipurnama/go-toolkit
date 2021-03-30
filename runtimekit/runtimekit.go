@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-const moduleName = "github.com/adipurnama/go-toolkit/"
-
 // CallerLineInfo returns caller file:line-package.function
 // e.g. service.go:38-service.CallAPI.
 func CallerLineInfo(skip int) string {
@@ -30,7 +28,8 @@ func CallerLineInfo(skip int) string {
 	if errGetWd == nil {
 		errFnLineInfo = strings.TrimPrefix(errFnLineInfo, cwd)
 		errFnLineInfo = strings.TrimPrefix(errFnLineInfo, "/")
-		errFnLineInfo = strings.Replace(errFnLineInfo, moduleName, "", 1)
+		moduleFnNames := strings.Split(errFnLineInfo, "/")
+		errFnLineInfo = moduleFnNames[len(moduleFnNames)-1:][0]
 	}
 
 	return errFnLineInfo
@@ -57,7 +56,8 @@ func SkippedFunctionName(skip int) string {
 	cwd, err := os.Getwd()
 	if err == nil {
 		result = strings.TrimPrefix(result, cwd)
-		result = strings.Replace(result, moduleName, "", 1)
+		moduleFnNames := strings.Split(result, "/")
+		result = moduleFnNames[len(moduleFnNames)-1:][0]
 	}
 
 	return result

@@ -8,7 +8,7 @@ import (
 	"github.com/adipurnama/go-toolkit/grpckit"
 	"github.com/adipurnama/go-toolkit/log"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"go.elastic.co/apm/module/apmgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -38,15 +38,16 @@ func main() {
 		HealthCheckFunc:      healthCheck(),
 	}
 
-	uIntOpt := grpc.UnaryInterceptor(
+	sOpts := grpc.UnaryInterceptor(
 		grpc_middleware.ChainUnaryServer(
-			grpc_recovery.UnaryServerInterceptor(),
+			apmgrpc.NewUnaryServerInterceptor(apmgrpc.WithRecovery()),
+			grpckit.ErrorResponseWriterInterceptor(grpckit.DefaultGRPCErrorHandler),
 			grpckit.LoggerInterceptor(),
 		))
 
-	s := grpc.NewServer(uIntOpt)
+	s := grpc.NewServer(sOpts)
 
-	exampleSvc := &v1.Service{}
+	exampleSvc := &v1.Server{}
 
 	v1.RegisterExampleServiceServer(s, exampleSvc)
 

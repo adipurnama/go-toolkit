@@ -6,6 +6,7 @@ import (
 	"fmt"
 	stdLog "log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/adipurnama/go-toolkit/log"
@@ -157,9 +158,10 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 
 // PrintRoutes prints *echo.Echo routes.
 func PrintRoutes(e *echo.Echo) {
-	stdLog.Println("=== initializing http routes")
+	stdLog.Println("== initializing http routes")
 
 	for _, r := range e.Routes() {
-		stdLog.Printf("===> %s %s %s", r.Method, r.Path, r.Name)
+		handlerNames := strings.Split(r.Name, "/")
+		stdLog.Printf("=====> %s %s %s", r.Method, r.Path, handlerNames[len(handlerNames)-1:][0])
 	}
 }

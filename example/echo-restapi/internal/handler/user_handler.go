@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/adipurnama/go-toolkit/echokit"
+	"github.com/adipurnama/go-toolkit/echokit/echoapmkit"
 	user "github.com/adipurnama/go-toolkit/example/echo-restapi/internal"
 	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/service"
 	"github.com/adipurnama/go-toolkit/example/echo-restapi/pkg/dto"
@@ -16,7 +17,7 @@ import (
 // CreateUser for create single user based on json body.
 func CreateUser(svc *service.Service) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		span := echokit.HandlerSpan(ctx)
+		span := echoapmkit.HandlerSpan(ctx)
 		defer span.End()
 
 		var req dto.CreateUserRequest

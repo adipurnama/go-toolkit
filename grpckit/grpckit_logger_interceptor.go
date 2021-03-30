@@ -15,19 +15,25 @@ import (
 
 const keyRequestID = "x-request-id"
 
-// LoggerInterceptor create server logger interceptor.
+// LoggerInterceptor adds logger to request context.Context & logs the upstream call output.
 func LoggerInterceptor() grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (resp interface{}, err error) {
 		service := path.Dir(info.FullMethod)[1:]
 		if service == "grpc.health.v1.Health" {
 			return handler(ctx, req)
 		}
 
 		start := time.Now()
-		newCtx := initCtx(ctx, info.FullMethod, start)
-		resp, err = handler(newCtx, req)
-		code := status.Code(err)
+		newCtx := newCtxWithLogger(ctx, info.FullMethod, start)
 
+		resp, err = handler(newCtx, req)
+
+		code := status.Code(err)
 		fields := []interface{}{
 			"grpc.code", code.String(),
 			"grpc.time_ms", time.Since(start).Milliseconds(),
@@ -40,7 +46,7 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		if err != nil {
-			log.FromCtx(newCtx).Error(err, "grpc request completed", fields...)
+			log.FromCtx(newCtx).Error(err, "gRPC request completed", fields...)
 
 			return nil, err
 		}
@@ -58,7 +64,7 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-func initCtx(ctx context.Context, fullMethodString string, start time.Time) context.Context {
+func newCtxWithLogger(ctx context.Context, fullMethodString string, start time.Time) context.Context {
 	method := path.Base(fullMethodString)
 	service := path.Dir(fullMethodString)[1:]
 

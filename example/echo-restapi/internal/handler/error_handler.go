@@ -5,7 +5,6 @@ import (
 
 	user "github.com/adipurnama/go-toolkit/example/echo-restapi/internal"
 	"github.com/adipurnama/go-toolkit/example/echo-restapi/internal/repository"
-	"github.com/adipurnama/go-toolkit/log"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 )
@@ -40,6 +39,4 @@ func ErrorHandler(err error, ctx echo.Context) {
 
 		return
 	}
-
-	log.FromCtx(ctx.Request().Context()).Error(err, "unhandled error found at handler.ErrorHandler")
 }

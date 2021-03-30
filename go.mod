@@ -26,9 +26,12 @@ require (
 	go.elastic.co/apm v1.11.0
 	go.elastic.co/apm/module/apmechov4 v1.11.0
 	go.elastic.co/apm/module/apmgoredisv8 v1.11.0
+	go.elastic.co/apm/module/apmgrpc v1.11.0
+	go.elastic.co/apm/module/apmhttp v1.11.0
 	go.elastic.co/apm/module/apmmongo v1.11.0
 	go.elastic.co/apm/module/apmsql v1.11.0
 	go.mongodb.org/mongo-driver v1.4.4
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

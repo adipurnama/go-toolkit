@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/adipurnama/go-toolkit/echokit"
+	"github.com/adipurnama/go-toolkit/echokit/echoapmkit"
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/adipurnama/go-toolkit/tracer"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"go.elastic.co/apm/module/apmechov4"
 )
 
 const (
@@ -54,7 +54,7 @@ func main() {
 	e := echo.New()
 	e.Use(
 		echokit.RequestIDLoggerMiddleware(&eCfg),
-		apmechov4.Middleware(),
+		echoapmkit.ElasticAPMMiddleware(),
 	)
 
 	e.HTTPErrorHandler = errorResponseWriter
@@ -74,12 +74,12 @@ func errorResponseWriter(err error, c echo.Context) {
 	}
 
 	var (
-		e         ServiceDomainError
-		eNotFound *errDataIDNotFound
+		errSvcDomain ServiceDomainError
+		eNotFound    *errDataIDNotFound
 	)
 
-	if ok := errors.As(err, &e); ok {
-		res.Message = e.Error()
+	if ok := errors.As(err, &errSvcDomain); ok {
+		res.Message = errSvcDomain.Error()
 
 		if errors.Is(err, errServiceUnavailable) {
 			res.Code = http.StatusBadGateway
@@ -100,7 +100,7 @@ type response struct {
 }
 
 func testErrorHandler(ctx echo.Context) error {
-	span := echokit.HandlerSpan(ctx)
+	span := echoapmkit.HandlerSpan(ctx)
 	defer span.End()
 
 	err := svcErrFunc(ctx.Request().Context())
@@ -112,21 +112,21 @@ func testErrorHandler(ctx echo.Context) error {
 }
 
 func testPayment(ctx echo.Context) error {
-	span := echokit.HandlerSpan(ctx)
+	span := echoapmkit.HandlerSpan(ctx)
 	defer span.End()
 
 	return errors.WithStack(errInsufficientMana)
 }
 
 func testSuccess(ctx echo.Context) error {
-	span := echokit.HandlerSpan(ctx)
+	span := echoapmkit.HandlerSpan(ctx)
 	defer span.End()
 
 	return ctx.String(http.StatusOK, "ok")
 }
 
 func testLoginErrorDetailedInfo(ctx echo.Context) error {
-	span := echokit.HandlerSpan(ctx)
+	span := echoapmkit.HandlerSpan(ctx)
 	defer span.End()
 
 	phone := ctx.QueryParam("phone")
