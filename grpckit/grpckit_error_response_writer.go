@@ -50,10 +50,8 @@ func ErrorResponseWriterInterceptor(errHandler GRPCErrorHandler) grpc.UnaryServe
 
 // DefaultGRPCErrorHandler provides default error to standard protobuff status.
 func DefaultGRPCErrorHandler(err error) *spb.Status {
-	code := status.Code(err)
-
 	return &spb.Status{
-		Code:    int32(code),
+		Code:    int32(codes.Internal),
 		Message: err.Error(),
 	}
 }
