@@ -23,12 +23,12 @@ lint: fmt
 	@echo -e "$(OK_COLOR)==> all is good$(NO_COLOR)..."
 
 generate: fmt lint
-	go generate ./...
+	@go generate ./...
 
 test: generate
-	go test -coverprofile=test_coverage.out $(PKGS)
-	go tool cover -html=test_coverage.out -o test_coverage.html
-	rm test_coverage.out
+	@go test -coverprofile=test_coverage.out $(PKGS)
+	@go tool cover -html=test_coverage.out -o test_coverage.html
+	@rm test_coverage.out
 	@echo Open test_coverage.html file on your web browser for detailed coverage
 
 gen-proto:
