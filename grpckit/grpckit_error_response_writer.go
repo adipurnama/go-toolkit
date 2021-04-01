@@ -3,7 +3,6 @@ package grpckit
 import (
 	"context"
 
-	"github.com/adipurnama/go-toolkit/log"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,24 +26,23 @@ func ErrorResponseWriterInterceptor(errHandler GRPCErrorHandler) grpc.UnaryServe
 		}
 
 		code := status.Code(err)
-
-		if code == codes.Unknown {
-			var spbStatus *spb.Status
-
-			if errHandler != nil {
-				spbStatus = errHandler(err)
-			} else {
-				spbStatus = DefaultGRPCErrorHandler(err)
-			}
-
-			err = status.FromProto(spbStatus).Err()
-
-			log.Println("got unknown error ", err)
-
+		if code != codes.Unknown {
 			return resp, err
 		}
 
-		return resp, err
+		var spbStatus *spb.Status
+
+		if errHandler != nil {
+			spbStatus = errHandler(err)
+		} else {
+			spbStatus = DefaultGRPCErrorHandler(err)
+		}
+
+		if spbStatus == nil {
+			return resp, err
+		}
+
+		return resp, status.FromProto(spbStatus).Err()
 	}
 }
 
