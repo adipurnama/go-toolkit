@@ -29,7 +29,7 @@ func CallerLineInfo(skip int) string {
 		errFnLineInfo = strings.TrimPrefix(errFnLineInfo, cwd)
 		errFnLineInfo = strings.TrimPrefix(errFnLineInfo, "/")
 		moduleFnNames := strings.Split(errFnLineInfo, "/")
-		errFnLineInfo = moduleFnNames[len(moduleFnNames)-1:][0]
+		errFnLineInfo = moduleFnNames[len(moduleFnNames)-1]
 	}
 
 	return errFnLineInfo
@@ -57,7 +57,7 @@ func SkippedFunctionName(skip int) string {
 	if err == nil {
 		result = strings.TrimPrefix(result, cwd)
 		moduleFnNames := strings.Split(result, "/")
-		result = moduleFnNames[len(moduleFnNames)-1:][0]
+		result = moduleFnNames[len(moduleFnNames)-1]
 	}
 
 	return result

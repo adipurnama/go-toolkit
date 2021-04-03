@@ -14,7 +14,7 @@ import (
 	apmhttp "go.elastic.co/apm/module/apmhttp"
 )
 
-var skipFuncCount = 2
+const skipFuncCount = 2
 
 // HandlerSpan retrieve span for http.Handler / controller type.
 func HandlerSpan(ctx echo.Context) *apm.Span {
@@ -125,8 +125,7 @@ func (m *middleware) handle(c echo.Context) error {
 
 	var errEchoHTTP *echo.HTTPError
 
-	ok := errors.As(handlerErr, &errEchoHTTP)
-	if ok {
+	if ok := errors.As(handlerErr, &errEchoHTTP); ok {
 		handlerErr = errEchoHTTP
 		resp.Status = errEchoHTTP.Code
 

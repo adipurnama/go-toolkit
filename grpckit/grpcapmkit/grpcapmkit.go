@@ -7,7 +7,7 @@ import (
 	"go.elastic.co/apm"
 )
 
-var skipFuncCount = 2
+const skipFuncCount = 2
 
 // ServerSpan retrieve span for grpc.Server handler.
 func ServerSpan(ctx context.Context) *apm.Span {

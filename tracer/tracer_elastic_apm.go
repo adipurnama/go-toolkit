@@ -7,7 +7,7 @@ import (
 	"go.elastic.co/apm"
 )
 
-var skipFuncCount = 2
+const skipFuncCount = 2
 
 // ServiceFuncSpan returns span for service layer type.
 func ServiceFuncSpan(ctx context.Context) *apm.Span {
