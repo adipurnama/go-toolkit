@@ -5,6 +5,7 @@ option go_package = "example/grpc-server/v1";
 
 message HelloRequest {
     string name = 1;
+    int32 age = 2;
 }
 
 message HelloResponse {

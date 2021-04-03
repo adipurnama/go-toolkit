@@ -46,7 +46,12 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		if err != nil {
-			log.FromCtx(newCtx).Error(err, "gRPC request completed", fields...)
+			if clientRequestErrorCode(code) {
+				fields = append(fields, "error", err)
+				log.FromCtx(newCtx).Info("gRPC request completed with error", fields...)
+			} else {
+				log.FromCtx(newCtx).Error(err, "gRPC request completed with error", fields...)
+			}
 
 			return nil, err
 		}
@@ -62,6 +67,23 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 
 		return resp, nil
 	}
+}
+
+func clientRequestErrorCode(c codes.Code) bool {
+	codes := []codes.Code{
+		codes.Unauthenticated,
+		codes.PermissionDenied,
+		codes.NotFound,
+		codes.InvalidArgument,
+	}
+
+	for _, v := range codes {
+		if c == v {
+			return true
+		}
+	}
+
+	return false
 }
 
 func newCtxWithLogger(ctx context.Context, fullMethodString string, start time.Time) context.Context {

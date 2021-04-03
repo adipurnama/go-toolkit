@@ -27,7 +27,7 @@ func (s *Server) Greet(ctx context.Context, req *HelloRequest) (*HelloResponse, 
 	}
 
 	return &HelloResponse{
-		Greeting: fmt.Sprintf("Hello %s", req.Name),
+		Greeting: fmt.Sprintf("Hello %s. Your are %d years old.", req.Name, req.Age),
 	}, nil
 }
 

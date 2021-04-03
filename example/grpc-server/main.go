@@ -8,6 +8,7 @@ import (
 	"github.com/adipurnama/go-toolkit/grpckit"
 	"github.com/adipurnama/go-toolkit/log"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	"go.elastic.co/apm/module/apmgrpc"
 	"google.golang.org/grpc"
 )
@@ -41,8 +42,10 @@ func main() {
 	sOpts := grpc.UnaryInterceptor(
 		grpc_middleware.ChainUnaryServer(
 			apmgrpc.NewUnaryServerInterceptor(apmgrpc.WithRecovery()),
+			grpckit.RequestIDInterceptor(grpckit.DefaultRequestIDProvider()),
 			grpckit.ErrorResponseWriterInterceptor(grpckit.DefaultGRPCErrorHandler),
 			grpckit.LoggerInterceptor(),
+			grpc_validator.UnaryServerInterceptor(),
 		))
 
 	s := grpc.NewServer(sOpts)
