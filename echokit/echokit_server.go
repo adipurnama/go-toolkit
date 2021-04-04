@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/runtimekit"
 	"github.com/adipurnama/go-toolkit/web"
 	validator "github.com/go-playground/validator/v10"
 	"github.com/iancoleman/strcase"
@@ -47,7 +48,7 @@ type HealthCheckFunc func(ctx context.Context) error
 
 // RunServer run graceful restapi server.
 func RunServer(e *echo.Echo, cfg *RuntimeConfig) {
-	appCtx, done := web.NewRuntimeContext()
+	appCtx, done := runtimekit.NewRuntimeContext()
 	defer done()
 
 	RunServerWithContext(appCtx, e, cfg)

@@ -3,9 +3,6 @@ package web
 import (
 	"context"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 
 	ut "github.com/go-playground/universal-translator"
 )
@@ -23,14 +20,6 @@ var (
 	// ContextKeyTranslator to store/obtains translator to/from request's context.
 	ContextKeyTranslator = ContextKey("translator")
 )
-
-// NewRuntimeContext returns context & cancel func listening to :
-// - os.Interrupt
-// - syscall.SIGTERM
-// - syscall.SIGINT.
-func NewRuntimeContext() (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-}
 
 // ContextID is a struct which will be used as context key.
 type ContextID struct {

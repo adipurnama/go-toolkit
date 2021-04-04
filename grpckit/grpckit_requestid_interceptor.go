@@ -3,7 +3,7 @@ package grpckit
 import (
 	"context"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/lithammer/shortuuid/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -13,16 +13,16 @@ type RequestIDProvider interface {
 	NewRequestID() string
 }
 
-// DefaultRequestIDProvider generates uuid.V4 string for request id.
+// DefaultRequestIDProvider generates shortuuid string for request id.
 func DefaultRequestIDProvider() RequestIDProvider {
-	return &uuidV4RequestIDProvider{}
+	return &shortuuidRequestIDProvider{}
 }
 
-type uuidV4RequestIDProvider struct{}
+type shortuuidRequestIDProvider struct{}
 
 // NewRequestID implements RequestIDProvider interface.
-func (p *uuidV4RequestIDProvider) NewRequestID() string {
-	return uuid.NewV4().String()
+func (p *shortuuidRequestIDProvider) NewRequestID() string {
+	return shortuuid.New()
 }
 
 // RequestIDInterceptor add request id to incoming request if it doesn't exists yet.

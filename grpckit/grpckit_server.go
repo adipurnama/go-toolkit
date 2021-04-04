@@ -6,11 +6,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/adipurnama/go-toolkit/web"
 	"github.com/iancoleman/strcase"
 
 	"github.com/adipurnama/go-toolkit/grpckit/grpc_health_v1"
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/runtimekit"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -26,7 +27,7 @@ type RuntimeConfig struct {
 
 // Run grpc server with health check, creating new app context.
 func Run(s *grpc.Server, cfg *RuntimeConfig) {
-	appCtx, done := web.NewRuntimeContext()
+	appCtx, done := runtimekit.NewRuntimeContext()
 	defer done()
 
 	RunWithContext(appCtx, s, cfg)

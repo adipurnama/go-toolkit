@@ -1,11 +1,22 @@
 package runtimekit
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 )
+
+// NewRuntimeContext returns context & cancel func listening to :
+// - os.Interrupt
+// - syscall.SIGTERM
+// - syscall.SIGINT.
+func NewRuntimeContext() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+}
 
 // CallerLineInfo returns caller file:line-package.function
 // e.g. service.go:38-service.CallAPI.

@@ -40,3 +40,5 @@ endif
 	@protoc --proto_path=./example/grpc-server --go_out=plugins=grpc:./ example/grpc-server/example_service.proto
 	@echo -e "$(OK_COLOR)==> Done$(NO_COLOR)..."
 
+run-pubsub:
+	PUBSUB_EMULATOR_HOST=localhost:8085 go run example/gcp-pubsub/main.go
