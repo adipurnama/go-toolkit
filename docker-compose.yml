@@ -6,3 +6,13 @@ services:
     restart: unless-stopped
     ports:
       - 8085:8085
+
+  spring-config-server:
+    image: hyness/spring-cloud-config-server:3.0.3
+    volumes:
+      - ${PWD}/example/springcloud-config/data:/config
+    ports:
+      - 8888:8888
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+      - ENCRYPT_KEY=supersecret2021

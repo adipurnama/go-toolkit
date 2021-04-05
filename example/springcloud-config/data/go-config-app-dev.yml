@@ -1,0 +1,59 @@
+log:
+  level: info
+  # json-enabled: true
+  json-enabled: false
+  file:
+    enabled: true
+    path: ./logs/myapp.log
+    maxsize-mb: 10
+    maxage-days: 7
+    maxbackup-files: 2
+  batch:
+    enabled: false
+    max-lines: 1000
+    interval: 15ms
+
+postgres-db:
+  primary:
+    username: <username>
+    password: "<password>"
+    host: mypostgres.host.com
+    port: 270017
+    schema: mypg_db
+    auth-db: admin
+    conn:
+      max-idle: 20
+      max-lifetime: 10m
+      timeout: 5m
+      max-open: 100
+
+redis:
+  username: <username>
+  password: "<password>"
+  host: mredis.aws.com
+  port: 6379
+  schema: 0
+  conn:
+    max-idle: 20
+    max-lifetime: 10m
+    timeout: 5m
+    max-open: 100
+
+mongodb:
+  primary:
+    username: <username>
+    password: "<password>"
+    host: mymongo.host.com
+    port: 270017
+    schema: mymongo_db
+    auth-db: admin
+    conn:
+      max-idle: 20
+      max-lifetime: 10m
+      timeout: 5m
+      max-open: 100
+
+secretdb:
+  primary:
+    username: visible-username
+    secret_val: '{cipher}c6d4b3728c22f1fdba12f1d878ae1f160dd7776270ef6b318dd97dcd0cf74d36'

@@ -26,8 +26,8 @@ func main() {
 	// if we're using git-backed springcloud config,
 	// we should have file 'config-debugger-development.yaml' at branch 'master'
 	appCfg := springcloud.AppConfig{
-		Name:    "config-debugger",
-		Profile: "development",
+		Name:    "go-config-app",
+		Profile: "dev",
 		Branch:  "master",
 	}
 

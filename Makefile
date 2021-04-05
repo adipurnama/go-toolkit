@@ -42,3 +42,6 @@ endif
 
 run-pubsub:
 	PUBSUB_EMULATOR_HOST=localhost:8085 go run example/gcp-pubsub/main.go
+
+run-springconfig:
+	SPRING_CLOUD_CONFIG_URL="http://localhost:8888" go run example/springcloud-config/main.go

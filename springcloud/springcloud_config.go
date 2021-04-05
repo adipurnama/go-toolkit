@@ -13,6 +13,9 @@ import (
 // ErrStatusCode ...
 var ErrStatusCode = errors.New("springcloud: invalid status code response")
 
+// ErrConfigNotFound ...
+var ErrConfigNotFound = errors.New("springcloud: config not found at config server")
+
 // Client interacts with remote config.
 type Client struct {
 	netClient *http.Client
@@ -73,6 +76,10 @@ func (c *Client) LoadViperConfig(ctx context.Context, viper *viper.Viper, appCfg
 
 	if err = json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
 		return errors.Wrap(err, "gcloudconfig: parsing json response failed")
+	}
+
+	if len(cfg.Propertysources) == 0 {
+		return errors.Wrapf(ErrConfigNotFound, "config url %s", url)
 	}
 
 	for key, value := range cfg.Propertysources[0].Source {
