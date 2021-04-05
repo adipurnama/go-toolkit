@@ -28,7 +28,7 @@ func NewPubSubClient(projectID string, opts ...option.ClientOption) (*pubsub.Cli
 
 	client, err := pubsub.NewClient(ctx, projectID, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create pubsub client")
+		return nil, errors.Wrap(err, "pubsubkit: failed to create pubsub client")
 	}
 
 	return client, nil

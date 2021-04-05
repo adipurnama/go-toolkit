@@ -21,19 +21,19 @@ func NewPubSubConsumer(
 
 	ok, err := sub.Exists(connectCtx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to check subscription existence")
+		return nil, errors.Wrapf(err, "pubsubkit: failed to check subscription %s existence", subID)
 	}
 
 	if !ok {
 		if !autoCreateSubscription {
-			return nil, errors.Wrapf(ErrSubscriptionNotFound, "failed create subscription %s", subID)
+			return nil, errors.Wrapf(ErrSubscriptionNotFound, "pubsubkit: failed create subscription %s", subID)
 		}
 
 		sub, err = client.CreateSubscription(connectCtx, subID, pubsub.SubscriptionConfig{
 			Topic: topic,
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "failed create pubsub subscription")
+			return nil, errors.Wrapf(err, "pubsubkit: failed create pubsub subscription %s", subID)
 		}
 	}
 
