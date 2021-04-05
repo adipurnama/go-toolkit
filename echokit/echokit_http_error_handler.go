@@ -83,9 +83,18 @@ func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 	}
 }
 
+// log.Error for 5xx errors, log.Info for other errors.
 func logErrorAndResponse(l *log.Logger, msg string, err error, ctx echo.Context) {
-	l.Error(err, msg,
-		"path", ctx.Request().URL.Path,
-		"status_code", ctx.Response().Status,
-	)
+	if ctx.Response().Status >= http.StatusInternalServerError {
+		l.Error(err, msg,
+			"path", ctx.Request().URL.Path,
+			"status_code", ctx.Response().Status,
+		)
+	} else {
+		l.Info(msg,
+			"error", err,
+			"path", ctx.Request().URL.Path,
+			"status_code", ctx.Response().Status,
+		)
+	}
 }

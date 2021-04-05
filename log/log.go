@@ -103,7 +103,7 @@ func (l Logger) debugf(message string, fields []interface{}) {
 		return
 	}
 
-	le := l.StdLog.Debug()
+	le := l.StdLog.Debug().Stack()
 	appendKeyValues(le, l.dynafields, fields)
 	le.Msg(message)
 }
@@ -113,7 +113,7 @@ func (l Logger) infof(message string, fields []interface{}) {
 		return
 	}
 
-	le := l.StdLog.Info()
+	le := l.StdLog.Info().Stack()
 	appendKeyValues(le, l.dynafields, fields)
 	le.Msg(message)
 }
@@ -123,7 +123,7 @@ func (l Logger) warnf(message string, fields []interface{}) {
 		return
 	}
 
-	le := l.StdLog.Warn()
+	le := l.StdLog.Warn().Stack()
 	appendKeyValues(le, l.dynafields, fields)
 	le.Msg(message)
 }
@@ -184,23 +184,36 @@ func appendKeyValues(le *zerolog.Event, dynafields []interface{}, fields []inter
 		}
 	}
 
-	if len(fields) > 1 {
-		for i := 0; i < len(fields)-1; i++ {
-			if fields[i] == nil {
-				continue
-			}
+	// check at least have 1 key:value
+	if len(fields) <= 1 {
+		le.Fields(fs)
+		return
+	}
 
-			k := stringify(fields[i])
-			if IsSensitiveParam(k) {
-				fs[k] = RedactionString
+	for i := 0; i < len(fields)-1; i++ {
+		if fields[i] == nil {
+			continue
+		}
+
+		k := stringify(fields[i])
+		if IsSensitiveParam(k) {
+			fs[k] = RedactionString
+			i++
+
+			continue
+		}
+
+		if k == "error" {
+			if errVal, ok := fields[i+1].(error); ok {
+				le.Err(errVal)
 				i++
 
 				continue
 			}
-
-			fs[k] = fields[i+1]
-			i++
 		}
+
+		fs[k] = fields[i+1]
+		i++
 	}
 
 	le.Fields(fs)
