@@ -15,6 +15,7 @@ require (
 	github.com/gomodule/redigo v1.8.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/iancoleman/strcase v0.1.3
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/labstack/echo-contrib v0.9.0
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/lithammer/shortuuid/v3 v3.0.4

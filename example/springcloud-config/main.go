@@ -20,18 +20,10 @@ func main() {
 	defer cancel()
 
 	httpclient := httpclient.NewStdHTTPClient()
-	configClient := springcloud.NewRemoteConfigClient(httpclient, remoteConfigURL)
+	configClient := springcloud.NewRemoteConfigClient(httpclient)
 	v := viper.New()
 
-	// if we're using git-backed springcloud config,
-	// we should have file 'config-debugger-development.yaml' at branch 'master'
-	appCfg := springcloud.AppConfig{
-		Name:    "go-config-app",
-		Profile: "dev",
-		Branch:  "master",
-	}
-
-	err := configClient.LoadViperConfig(appCtx, v, appCfg)
+	err := configClient.LoadViperConfig(appCtx, v)
 	if err != nil {
 		log.FromCtx(appCtx).Error(err, "load remote config failed")
 
