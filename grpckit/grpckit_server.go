@@ -6,27 +6,51 @@ import (
 	"net"
 	"time"
 
-	"github.com/adipurnama/go-toolkit/web"
 	"github.com/iancoleman/strcase"
 
 	"github.com/adipurnama/go-toolkit/grpckit/grpc_health_v1"
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/runtimekit"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+)
+
+const (
+	defaultPort                = 8288
+	defaultReqTimeout          = 7 * time.Second
+	defaultShutdownWaitTimeout = 7 * time.Second
 )
 
 // RuntimeConfig defines runtime configuration for grpc service with health check.
 type RuntimeConfig struct {
 	ShutdownWaitDuration time.Duration
+	RequestTimeout       time.Duration
 	Port                 int
 	Name                 string
 	EnableReflection     bool
 	HealthCheckFunc
 }
 
+func (cfg *RuntimeConfig) validate() {
+	// port
+	if cfg.Port == 0 {
+		cfg.Port = defaultPort
+	}
+
+	// check for timeout setting
+	if cfg.RequestTimeout == 0 {
+		cfg.RequestTimeout = defaultReqTimeout
+	}
+
+	if cfg.ShutdownWaitDuration == 0 {
+		cfg.ShutdownWaitDuration = defaultShutdownWaitTimeout
+	}
+}
+
 // Run grpc server with health check, creating new app context.
 func Run(s *grpc.Server, cfg *RuntimeConfig) {
-	appCtx, done := web.NewRuntimeContext()
+	appCtx, done := runtimekit.NewRuntimeContext()
 	defer done()
 
 	RunWithContext(appCtx, s, cfg)
@@ -35,6 +59,8 @@ func Run(s *grpc.Server, cfg *RuntimeConfig) {
 // RunWithContext runs grpc server with health check using existing background context.
 func RunWithContext(appCtx context.Context, s *grpc.Server, cfg *RuntimeConfig) {
 	cfg.Name = strcase.ToSnake(cfg.Name)
+
+	cfg.validate()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
 	if err != nil {

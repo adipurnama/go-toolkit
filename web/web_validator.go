@@ -1,6 +1,8 @@
 package web
 
-import "github.com/go-playground/validator/v10"
+import (
+	validator "github.com/go-playground/validator/v10"
+)
 
 // Validator - go-playground/validator wrapper.
 type Validator struct {

@@ -3,29 +3,23 @@ package web
 import (
 	"context"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
+
+	ut "github.com/go-playground/universal-translator"
 )
 
 var (
-	// ContextKeyRequestID to obtains requestID from context.
+	// ContextKeyRequestID to store/obtains requestID from context.
 	ContextKeyRequestID = ContextKey("reqID")
 
-	// ContextKeyHeader to obtains original http header from downstream.
+	// ContextKeyHeader to store/obtains original http header from downstream.
 	ContextKeyHeader = ContextKey("header")
 
-	// ContextKeyTraceID to obtains traceID from downstream context.
+	// ContextKeyTraceID to store/obtains traceID from downstream context.
 	ContextKeyTraceID = ContextKey("traceID")
-)
 
-// NewRuntimeContext returns context & cancel func listening to :
-// - os.Interrupt
-// - syscall.SIGTERM
-// - syscall.SIGINT.
-func NewRuntimeContext() (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-}
+	// ContextKeyTranslator to store/obtains translator to/from request's context.
+	ContextKeyTranslator = ContextKey("translator")
+)
 
 // ContextID is a struct which will be used as context key.
 type ContextID struct {
@@ -61,4 +55,12 @@ func HeaderFromContext(ctx context.Context) http.Header {
 	val := make(http.Header)
 
 	return val
+}
+
+func translatorFromContext(ctx context.Context) ut.Translator {
+	if val, ok := ctx.Value(ContextKeyTranslator).(ut.Translator); ok {
+		return val
+	}
+
+	return nil
 }

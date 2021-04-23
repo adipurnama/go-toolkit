@@ -23,12 +23,12 @@ lint: fmt
 	@echo -e "$(OK_COLOR)==> all is good$(NO_COLOR)..."
 
 generate: fmt lint
-	go generate ./...
+	@go generate ./...
 
 test: generate
-	go test -coverprofile=test_coverage.out $(PKGS)
-	go tool cover -html=test_coverage.out -o test_coverage.html
-	rm test_coverage.out
+	@go test -coverprofile=test_coverage.out $(PKGS)
+	@go tool cover -html=test_coverage.out -o test_coverage.html
+	@rm test_coverage.out
 	@echo Open test_coverage.html file on your web browser for detailed coverage
 
 gen-proto:
@@ -40,3 +40,25 @@ endif
 	@protoc --proto_path=./example/grpc-server --go_out=plugins=grpc:./ example/grpc-server/example_service.proto
 	@echo -e "$(OK_COLOR)==> Done$(NO_COLOR)..."
 
+run-pubsub: pubsub-local
+	PUBSUB_EMULATOR_HOST=localhost:8085 go run examples/gcp-pubsub/main.go
+
+run-springconfig:
+	SPRING_CLOUD_CONFIG_URL="http://localhost:8888/" \
+	SPRING_CLOUD_CONFIG_PATH="/go-config-app/dev/" \
+							go run examples/springcloud-config/main.go
+
+run-elasticapm-echo: apm-local
+	ELASTIC_APM_SERVER_URL="http://localhost:8200" \
+         ELASTIC_APM_ENVIRONMENT="local-test" \
+         ELASTIC_APM_SERVICE_NAME="echo-test-apm-middleware" \
+         go run examples/echo-restapi/main.go
+
+apm-local:
+	docker-compose up -d elasticsearch kibana es-apm-server
+
+pubsub-local:
+	docker-compose up -d googlecloud-pubsub
+
+springcloud-config-local:
+	docker-compose up -d spring-config-server

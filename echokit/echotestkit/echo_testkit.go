@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/adipurnama/go-toolkit/web"
-	"github.com/go-playground/validator/v10"
-	"github.com/labstack/echo/v4"
+	validator "github.com/go-playground/validator/v10"
+	echo "github.com/labstack/echo/v4"
 )
 
 // Request return echo.Context and httptest.ResponseRecorder.

@@ -4,21 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	stdLog "log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/runtimekit"
 	"github.com/adipurnama/go-toolkit/web"
 	validator "github.com/go-playground/validator/v10"
 	"github.com/iancoleman/strcase"
 	echo_prometheus "github.com/labstack/echo-contrib/prometheus"
-	"github.com/labstack/echo/v4"
+	echo "github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 const (
 	defaultInfoPath   = "/actuator/info"
 	defaultHealthPath = "/actuator/health"
 	defaultReqTimeout = 7 * time.Second
+	defaultPort       = 8088
 )
 
 // RuntimeConfig defines echo REST API runtime config with healthcheck.
@@ -34,6 +39,31 @@ type RuntimeConfig struct {
 	HealthCheckFunc
 }
 
+func (cfg *RuntimeConfig) validate() {
+	// port
+	if cfg.Port == 0 {
+		cfg.Port = defaultPort
+	}
+
+	// healthcheck
+	if cfg.HealthCheckPath == "" {
+		cfg.HealthCheckPath = defaultHealthPath
+	}
+
+	// check for timeout setting
+	if cfg.RequestTimeoutConfig == nil {
+		cfg.RequestTimeoutConfig = &TimeoutConfig{}
+	}
+
+	if cfg.RequestTimeoutConfig.Timeout == 0 {
+		cfg.RequestTimeoutConfig.Timeout = defaultReqTimeout
+	}
+
+	if cfg.RequestTimeoutConfig.Skipper == nil {
+		cfg.RequestTimeoutConfig.Skipper = middleware.DefaultSkipper
+	}
+}
+
 type healthStatus struct {
 	serving bool
 	Status  string `json:"status"`
@@ -44,7 +74,7 @@ type HealthCheckFunc func(ctx context.Context) error
 
 // RunServer run graceful restapi server.
 func RunServer(e *echo.Echo, cfg *RuntimeConfig) {
-	appCtx, done := web.NewRuntimeContext()
+	appCtx, done := runtimekit.NewRuntimeContext()
 	defer done()
 
 	RunServerWithContext(appCtx, e, cfg)
@@ -59,17 +89,18 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 
 	logger := log.FromCtx(appCtx)
 
+	e.HideBanner = true
+	validator := validator.New()
+
+	cfg.validate()
+
+	// request validator setup
+	e.Use(ValidatorTranslatorMiddleware(validator), TimeoutMiddleware(cfg.RequestTimeoutConfig))
+	e.Validator = web.NewValidator(validator)
+
+	// healthcheck
 	hs := &healthStatus{
 		serving: true,
-	}
-
-	e.HideBanner = true
-	e.Validator = web.NewValidator(validator.New())
-
-	e.Use(TimeoutMiddleware(cfg.RequestTimeoutConfig))
-
-	if cfg.HealthCheckPath == "" {
-		cfg.HealthCheckPath = defaultHealthPath
 	}
 
 	e.GET(cfg.HealthCheckPath, func(c echo.Context) error {
@@ -131,9 +162,25 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 		}
 	}()
 
+	// error fallback handler
+	e.HTTPErrorHandler = loggerHTTPErrorHandler(e.HTTPErrorHandler)
+
+	PrintRoutes(e)
+
+	// start server
 	logger.Info("serving REST HTTP server", "port", cfg.Port)
 
 	if err := e.Start(fmt.Sprintf(":%d", cfg.Port)); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error(err, "starting http server")
+	}
+}
+
+// PrintRoutes prints *echo.Echo routes.
+func PrintRoutes(e *echo.Echo) {
+	stdLog.Println("== initializing http routes")
+
+	for _, r := range e.Routes() {
+		handlerNames := strings.Split(r.Name, "/")
+		stdLog.Printf("=====> %s %s %s", r.Method, r.Path, handlerNames[len(handlerNames)-1:][0])
 	}
 }

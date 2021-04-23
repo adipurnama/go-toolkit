@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gopkg.in/natefinch/lumberjack.v2"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -25,6 +25,7 @@ type Logger struct {
 	ErrLog zerolog.Logger
 	// Dynamic fields
 	dynafields []interface{}
+	logFmt     bool
 }
 
 type config struct {

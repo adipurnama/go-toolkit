@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/diode"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/natefinch/lumberjack.v2"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 // NewDevLogger logger.
@@ -19,7 +18,7 @@ import (
 // If static fields are provided those values will define
 // the default static fields for each new built instance
 // if they were not yet configured.
-func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields ...interface{}) *Logger {
+func NewDevLogger(fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields ...interface{}) *Logger {
 	var writer io.Writer
 
 	if fileLogger != nil {
@@ -35,9 +34,6 @@ func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, batch
 	}
 
 	output := zerolog.ConsoleWriter{Out: writer, TimeFormat: time.RFC3339}
-	output.FormatLevel = func(i interface{}) string {
-		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
-	}
 	output.FormatMessage = func(i interface{}) string {
 		return fmt.Sprintf("** %s **", i)
 	}
@@ -57,36 +53,17 @@ func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, batch
 	output.FormatErrFieldName = func(i interface{}) string {
 		return "error="
 	}
-	output.FormatCaller = func(i interface{}) string {
-		var c string
-
-		if cc, ok := i.(string); ok {
-			c = cc
-		}
-
-		if len(c) == 0 {
-			return fmt.Sprintf("%s |", c)
-		}
-
-		cwd, err := os.Getwd()
-		if err == nil {
-			c = strings.TrimPrefix(c, cwd)
-			c = strings.TrimPrefix(c, "/")
-		}
-
-		return fmt.Sprintf("%s |", c)
-	}
 
 	stdl := zerolog.New(output).With().
 		Timestamp().
 		CallerWithSkipFrameCount(cfgSkipCallerCount).
-		Stack().
 		Logger()
 	errl := zerolog.New(output).With().
 		Timestamp().
 		CallerWithSkipFrameCount(cfgSkipCallerCount).
-		Stack().
 		Logger()
+
+	level := LevelDebug
 
 	setLogLevel(&stdl, level)
 	setLogLevel(&errl, level)
@@ -95,11 +72,12 @@ func NewDevLogger(level Level, name string, fileLogger *lumberjack.Logger, batch
 		Level:  level,
 		StdLog: stdl,
 		ErrLog: errl,
+		logFmt: true,
 	}
 
 	// if len(stfields) > 1 && !cfg.configured {
 	if !cfg.configured {
-		setup(level, name, fileLogger, true, batchCfg, stfields)
+		setup(level, "", fileLogger, true, batchCfg, stfields)
 
 		defaultLogger = l
 	}
@@ -137,12 +115,10 @@ func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, batchCfg
 	stdl := log.Output(stdWriter).With().
 		Timestamp().
 		CallerWithSkipFrameCount(cfgSkipCallerCount).
-		Stack().
 		Logger()
 	errl := log.Output(errWriter).With().
 		Timestamp().
 		CallerWithSkipFrameCount(cfgSkipCallerCount).
-		Stack().
 		Logger()
 
 	setLogLevel(&stdl, level)

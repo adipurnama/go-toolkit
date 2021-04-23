@@ -8,7 +8,7 @@ import (
 
 	"github.com/adipurnama/go-toolkit/echokit"
 	"github.com/adipurnama/go-toolkit/web"
-	"github.com/labstack/echo/v4"
+	echo "github.com/labstack/echo/v4"
 )
 
 var (

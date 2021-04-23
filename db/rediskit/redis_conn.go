@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/adipurnama/go-toolkit/db"
 	goredis "github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
+	apmgoredis "go.elastic.co/apm/module/apmgoredisv8"
 )
 
 // NewRedisConnection returns new redis client
@@ -23,11 +25,17 @@ func NewRedisConnection(option *db.Option) (*goredis.Client, error) {
 		PoolTimeout:  option.MaxLifetime,
 	}
 
-	rClient := goredis.NewClient(&opts)
+	dbID, err := strconv.Atoi(option.DatabaseName)
+	if err == nil {
+		opts.DB = dbID
+	}
 
-	_, err := rClient.Ping(context.Background()).Result()
+	rClient := goredis.NewClient(&opts)
+	rClient.AddHook(apmgoredis.NewHook())
+
+	_, err = rClient.Ping(context.Background()).Result()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed connecting to redis")
+		return nil, errors.Wrap(err, "rediskit: failed to initiate redis PING")
 	}
 
 	log.Println("successfully connected to redis", opts.Addr)

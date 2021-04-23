@@ -3,66 +3,97 @@ package echokit
 import (
 	"net/http"
 
-	"github.com/adipurnama/go-toolkit/errors"
 	"github.com/adipurnama/go-toolkit/log"
-	"github.com/labstack/echo/v4"
+	"github.com/adipurnama/go-toolkit/web"
+	echo "github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 )
 
-// HTTPErrorResponseWriter to write JSON / HTML response for given error type(s).
-type HTTPErrorResponseWriter func(err error, ctx echo.Context)
+type defaultErrorResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
 
-// LoggerHTTPErrorHandler logs error from handler's downstream call.
-func LoggerHTTPErrorHandler(w HTTPErrorResponseWriter) echo.HTTPErrorHandler {
+func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 	return func(err error, ctx echo.Context) {
-		if err == nil {
-			return
-		}
+		logger := log.FromCtx(ctx.Request().Context())
+		msg := "request completed with error"
 
-		previouslyCommitted := ctx.Response().Committed
-
-		if !previouslyCommitted {
-			// writer may commit response
-			w(errors.Cause(err), ctx)
-		}
-
-		resp := ctx.Response()
-
-		if !previouslyCommitted && ctx.Response().Committed {
-			log.FromCtx(ctx.Request().Context()).Error(err, "request completed with error",
-				"path", ctx.Path(),
-				"status_code", resp.Status,
-				"content_type", resp.Header().Get("content-type"),
-			)
-
-			return
-		}
+		prevCommitted := ctx.Response().Committed
 
 		if !ctx.Response().Committed {
-			code := http.StatusInternalServerError
-			msg := "request completed but not handled yet"
-
-			var e *echo.HTTPError
-
-			if ok := errors.As(err, &e); ok {
-				code = e.Code
-				_ = ctx.JSON(e.Code, e)
-			} else {
-				_ = ctx.JSON(http.StatusInternalServerError, echo.HTTPError{
-					Code:     http.StatusInternalServerError,
-					Message:  errors.Cause(err).Error(),
-					Internal: err,
-				})
-			}
-
-			if code != http.StatusInternalServerError {
-				msg = "http error found"
-			}
-
-			log.FromCtx(ctx.Request().Context()).
-				Error(err, msg,
-					"path", ctx.Path(),
-					"status_code", ctx.Response().Status,
-				)
+			// writer may commit response
+			w(err, ctx)
 		}
+
+		if ctx.Response().Committed {
+			if !prevCommitted {
+				logErrorAndResponse(logger, msg, err, ctx)
+			}
+
+			return
+		}
+
+		// found error & response not yet written
+
+		// check for echo.NewHTTPError returned from handler / controller
+		var errEchoHTTP *echo.HTTPError
+		if ok := errors.As(err, &errEchoHTTP); ok {
+			if errEchoHTTP.Internal != nil {
+				err = errEchoHTTP.Internal
+			}
+
+			errWriteResp := ctx.JSON(errEchoHTTP.Code, errEchoHTTP)
+
+			if errWriteResp != nil {
+				logger.Error(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
+			}
+
+			logErrorAndResponse(logger, msg, err, ctx)
+
+			return
+		}
+
+		// check for web.Validation error
+		var httpErr *web.HTTPError
+		if ok := errors.As(err, &httpErr); ok {
+			errWriteResp := ctx.JSON(httpErr.Code, httpErr)
+
+			if errWriteResp != nil {
+				logger.Error(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
+			}
+
+			logErrorAndResponse(logger, msg, err, ctx)
+
+			return
+		}
+
+		// unhandled errors returned types from controller / handler
+		resp := defaultErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Message: http.StatusText(http.StatusInternalServerError),
+		}
+
+		errWriteResp := ctx.JSON(resp.Code, resp)
+		if errWriteResp != nil {
+			logger.Error(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
+		}
+
+		logErrorAndResponse(logger, "request completed with unhandled error. add error type inspection in your echo.HTTPErrorHandler", err, ctx)
+	}
+}
+
+func logErrorAndResponse(l *log.Logger, msg string, err error, ctx echo.Context) {
+	if ctx.Response().Status >= http.StatusInternalServerError {
+		l.Error(err, msg,
+			"path", ctx.Request().URL.Path,
+			"status_code", ctx.Response().Status,
+		)
+	} else {
+		l.Info(msg,
+			"error", err,
+			"path", ctx.Request().URL.Path,
+			"status_code", ctx.Response().Status,
+		)
 	}
 }

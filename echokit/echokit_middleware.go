@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/adipurnama/go-toolkit/log"
-	uuid "github.com/satori/go.uuid"
+	shortuuid "github.com/lithammer/shortuuid/v3"
 
 	"github.com/adipurnama/go-toolkit/web"
 
 	"github.com/labstack/echo/v4/middleware"
 
-	"github.com/labstack/echo/v4"
+	echo "github.com/labstack/echo/v4"
 )
 
 // Middlewares
@@ -63,7 +63,7 @@ func (m *rIDLoggerMiddleware) handle(next echo.HandlerFunc) echo.HandlerFunc {
 		tID := ctx.Request().Header.Get(m.tIDKey)
 
 		if tID == "" {
-			tID = uuid.NewV4().String()
+			tID = shortuuid.New()
 			ctx.Request().Header.Add(web.HTTPKeyTraceID, tID)
 
 			if web.HTTPKeyTraceID != m.tIDKey {
@@ -78,7 +78,7 @@ func (m *rIDLoggerMiddleware) handle(next echo.HandlerFunc) echo.HandlerFunc {
 		rID := ctx.Request().Header.Get(m.rIDKey)
 
 		if rID == "" {
-			rID = uuid.NewV4().String()
+			rID = shortuuid.New()
 
 			ctx.Request().Header.Add(web.HTTPKeyRequestID, rID)
 

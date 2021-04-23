@@ -1,13 +1,14 @@
 package web
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 
-	"github.com/go-playground/validator/v10"
+	validator "github.com/go-playground/validator/v10"
 )
 
 // HTTPError -.
@@ -30,41 +31,58 @@ type ErrorField struct {
 }
 
 func (e *HTTPError) Error() string {
-	b, _ := json.Marshal(e)
-	return fmt.Sprintf("Error with HTTP StatusCode %d , payload : %s", e.Code, string(b))
+	return fmt.Sprintf("web.HTTPError code=%d, message=%s", e.Code, e.Message)
 }
 
 // NewHTTPValidationError - return new HTTPError caused by validation error.
-func NewHTTPValidationError(err error) *HTTPError {
-	var fields []ErrorField
-
+func NewHTTPValidationError(ctx context.Context, err error) (result *HTTPError) {
 	message := errors.Cause(err).Error()
+	result = &HTTPError{
+		Code:    http.StatusBadRequest,
+		Message: message,
+	}
 
 	var validationErrs validator.ValidationErrors
 
-	if ok := errors.As(err, &validationErrs); ok {
-		if len(validationErrs) > 0 {
-			message = "field validation error found"
+	ok := errors.As(err, &validationErrs)
+	if !ok {
+		return result
+	}
 
-			for _, e := range validationErrs {
-				fields = append(fields, ErrorField{
-					Message: fmt.Sprintf("%s", e),
-					Field:   e.Field(),
-				})
-			}
+	if len(validationErrs) == 0 {
+		return result
+	}
 
-			if len(fields) > 1 {
-				message = "field validation errors found"
-			}
+	var fields []ErrorField
+
+	message = "field validation error found"
+	trans := translatorFromContext(ctx)
+
+	for _, e := range validationErrs {
+		fieldName := strings.ToLower(e.Field())
+		result.Message = e.Translate(trans)
+
+		if trans != nil {
+			fields = append(fields, ErrorField{
+				Message: e.Translate(trans),
+				Field:   fieldName,
+			})
+		} else {
+			fields = append(fields, ErrorField{
+				Message: fmt.Sprintf("%s", e),
+				Field:   fieldName,
+			})
 		}
 	}
 
-	return &HTTPError{
-		Code:    http.StatusBadRequest,
-		Message: message,
-		Response: ErrorDetails{
-			Exception: message,
-			Errors:    fields,
-		},
+	if len(fields) > 1 {
+		message = "field validation errors found"
 	}
+
+	result.Response = ErrorDetails{
+		Exception: message,
+		Errors:    fields,
+	}
+
+	return result
 }
