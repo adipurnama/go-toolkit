@@ -26,8 +26,8 @@ type (
 	}
 
 	appConfig struct {
-		ConfigPath string `envconfig:"SPRING_CLOUD_CONFIG_PATH" required:"true"`
-		ConfigURL  string `envconfig:"SPRING_CLOUD_CONFIG_URL" required:"true"`
+		ConfigPaths []string `envconfig:"SPRING_CLOUD_CONFIG_PATHS" required:"true"`
+		ConfigURL   string   `envconfig:"SPRING_CLOUD_CONFIG_URL" required:"true"`
 	}
 
 	// structs having same structure as response from spring cloud config.
@@ -45,12 +45,21 @@ type (
 	}
 )
 
-func (cfg appConfig) confingEndpoint() string {
-	cfg.ConfigURL = strings.TrimSuffix(cfg.ConfigURL, "/")
-	cfg.ConfigPath = strings.TrimSuffix(cfg.ConfigPath, "/")
-	cfg.ConfigPath = strings.TrimPrefix(cfg.ConfigPath, "/")
+func (cfg appConfig) confingEndpoints() []string {
+	urls := []string{}
 
-	return fmt.Sprintf("%s/%s", cfg.ConfigURL, cfg.ConfigPath)
+	cfg.ConfigURL = strings.TrimSuffix(cfg.ConfigURL, "/")
+
+	for _, v := range cfg.ConfigPaths {
+		path := strings.TrimSuffix(v, "/")
+		path = strings.TrimPrefix(path, "/")
+
+		url := fmt.Sprintf("%s/%s", cfg.ConfigURL, path)
+
+		urls = append(urls, url)
+	}
+
+	return urls
 }
 
 // NewRemoteConfigClient returns new springcloud config client.
@@ -70,7 +79,18 @@ func (c *Client) LoadViperConfig(ctx context.Context, viper *viper.Viper) error 
 		return errors.Wrap(err, "springcloud: error parsing cloud config")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, appCfg.confingEndpoint(), nil)
+	for _, url := range appCfg.confingEndpoints() {
+		err = c.applyViperFromSpringRemoteURL(ctx, viper, url)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) applyViperFromSpringRemoteURL(ctx context.Context, v *viper.Viper, url string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrap(err, "gloudconfig: building request failed")
 	}
@@ -93,11 +113,11 @@ func (c *Client) LoadViperConfig(ctx context.Context, viper *viper.Viper) error 
 	}
 
 	if len(cfg.Propertysources) == 0 {
-		return errors.Wrapf(ErrConfigNotFound, "config url %s", appCfg.confingEndpoint())
+		return errors.Wrapf(ErrConfigNotFound, "config url %s", url)
 	}
 
 	for key, value := range cfg.Propertysources[0].Source {
-		viper.Set(key, value)
+		v.Set(key, value)
 	}
 
 	return nil

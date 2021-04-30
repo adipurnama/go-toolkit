@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -52,6 +53,36 @@ func NewDevLogger(fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields
 	}
 	output.FormatErrFieldName = func(i interface{}) string {
 		return "error="
+	}
+	output.FormatCaller = func(i interface{}) string {
+		var sb strings.Builder
+
+		callers := strings.Split(fmt.Sprintf("%s", i), "/")
+
+		for i, v := range callers {
+			if i == len(callers)-1 {
+				sb.WriteString(callers[i])
+				return sb.String()
+			}
+
+			if i == len(callers)-2 {
+				sb.WriteString(fmt.Sprintf("%s/", callers[i]))
+				continue
+			}
+
+			if i == 0 && v == "vendor" {
+				sb.WriteString("vendor/")
+				continue
+			}
+
+			chars := []rune(v)
+			if len(chars) > 0 {
+				sb.WriteRune(chars[0])
+				sb.WriteString("/")
+			}
+		}
+
+		return sb.String()
 	}
 
 	stdl := zerolog.New(output).With().

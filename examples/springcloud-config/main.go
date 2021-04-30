@@ -2,6 +2,7 @@ package main
 
 import (
 	// "github.com/adipurnama/go-toolkit/db/postgres".
+
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/adipurnama/go-toolkit/runtimekit"
 	"github.com/adipurnama/go-toolkit/springcloud"
@@ -12,7 +13,7 @@ import (
 
 // test run using 'make run-springconfig' command
 // make sure localhost spring cloud config is already running.
-//  `docker-compose up -d spring-cloud-config`
+//  `docker compose up -d spring-cloud-config`
 func main() {
 	appCtx, cancel := runtimekit.NewRuntimeContext()
 	defer cancel()
@@ -27,13 +28,6 @@ func main() {
 
 		return
 	}
-
-	// db, err := postgres.NewFromViperFileConfig(v, "postgres.primary")
-	// if err != nil {
-	// 	log.FromCtx(appCtx).Error(err, "load db from viper config failed")
-
-	// 	return
-	// }
 
 	// print all remote config key-values
 	log.FromCtx(appCtx).Info("load remote config success")
@@ -54,4 +48,15 @@ func main() {
 	for _, k := range v.AllKeys() {
 		log.FromCtx(appCtx).Info("===>", k, v.Get(k))
 	}
+
+	// create db, pubsub, etc from config properties
+
+	// db, err := postgres.NewFromViperFileConfig(v, "postgres.primary")
+	// if err != nil {
+	// 	log.FromCtx(appCtx).Error(err, "load db from viper config failed")
+
+	// 	return
+	// }
+
+	log.FromCtx(appCtx).Info("Bye.")
 }

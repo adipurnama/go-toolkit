@@ -45,7 +45,7 @@ run-pubsub: pubsub-local
 
 run-springconfig:
 	SPRING_CLOUD_CONFIG_URL="http://localhost:8888/" \
-	SPRING_CLOUD_CONFIG_PATH="/go-config-app/dev/" \
+	SPRING_CLOUD_CONFIG_PATHS="/go-config-app/dev/,/go-config-app/other/" \
 							go run examples/springcloud-config/main.go
 
 run-elasticapm-echo: apm-local
@@ -55,10 +55,10 @@ run-elasticapm-echo: apm-local
          go run examples/echo-restapi/main.go
 
 apm-local:
-	docker-compose up -d elasticsearch kibana es-apm-server
+	docker compose up -d elasticsearch kibana es-apm-server
 
 pubsub-local:
-	docker-compose up -d googlecloud-pubsub
+	docker compose up -d googlecloud-pubsub
 
 springcloud-config-local:
-	docker-compose up -d spring-config-server
+	docker compose up -d spring-config-server

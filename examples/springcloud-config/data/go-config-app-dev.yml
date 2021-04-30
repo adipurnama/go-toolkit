@@ -1,3 +1,7 @@
+override:
+  # this should be overridden
+  my-value:
+
 log:
   level: info
   # json-enabled: true

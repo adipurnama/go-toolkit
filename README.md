@@ -56,7 +56,18 @@ with elastic APM.
 * `web` - provides utilities to working with general http request / response.
 * `web/httpclient` - HTTP-based client to perform API call
 
+## Springcloud
 
-## License
+Provides client to [SpringCloud Config](http://spring.io/projects/spring-cloud-config) and parse the key-values to `*viper.Viper` config.
+
+* required env var
+    * `SPRING_CLOUD_CONFIG_URL` - string, a base url for the remote config
+        server
+    * `SPRING_CLOUD_CONFIG_PATHS` - comma separated string. Spring remote
+        config paths. e.g. `/my-app/dev,/my-app/local`. Paths on the leftmost
+        will be loaded first. And the rightmost paths will override previous
+        `*viper.Viper` values (if any).
+
+## LICENSE
 
 [MIT](https://github.com/labstack/echo/blob/master/LICENSE)
