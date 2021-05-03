@@ -1,3 +1,4 @@
+// Package springcloud helps interact with spring cloud remote config
 package springcloud
 
 import (
@@ -6,25 +7,23 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/adipurnama/go-toolkit/log"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 )
 
 var (
-	// ErrStatusCode ...
+	// ErrStatusCode returned when call to springcloud remote config returns HTTP other than 2xx.
 	ErrStatusCode = errors.New("springcloud: invalid status code response")
-	// ErrConfigNotFound ...
+	// ErrConfigNotFound returned when profiles doesn't exists in remote config.
 	ErrConfigNotFound = errors.New("springcloud: config not found at config server")
 )
 
-type (
-	// Client interacts with remote config.
-	Client struct {
-		netClient *http.Client
-	}
+const cfgKeySpringConfigRefreshInterval = "springcloud-config.refresh-interval"
 
+type (
 	appConfig struct {
 		ConfigPaths []string `envconfig:"SPRING_CLOUD_CONFIG_PATHS" required:"true"`
 		ConfigURL   string   `envconfig:"SPRING_CLOUD_CONFIG_URL" required:"true"`
@@ -45,7 +44,7 @@ type (
 	}
 )
 
-func (cfg appConfig) confingEndpoints() []string {
+func (cfg appConfig) configEndpoints() []string {
 	urls := []string{}
 
 	cfg.ConfigURL = strings.TrimSuffix(cfg.ConfigURL, "/")
@@ -62,16 +61,60 @@ func (cfg appConfig) confingEndpoints() []string {
 	return urls
 }
 
-// NewRemoteConfigClient returns new springcloud config client.
-func NewRemoteConfigClient(c *http.Client) *Client {
-	return &Client{
-		netClient: c,
+// Load key-values from spring cloud config profile(s)
+// if value `springcloud-config.refresh-interval` exists, preiodically refresh the values
+// based on interval set.
+func (c *RemoteConfig) Load(ctx context.Context) error {
+	err := c.loadRemoteConfigForViper(ctx)
+	if err != nil {
+		return err
 	}
+
+	if !c.cfg.IsSet(cfgKeySpringConfigRefreshInterval) {
+		log.FromCtx(ctx).Info("viper springcloud-config auto-refresh is inactive")
+		return nil
+	}
+
+	refreshInterval := c.cfg.GetDuration(cfgKeySpringConfigRefreshInterval)
+	if refreshInterval == 0 {
+		log.FromCtx(ctx).Info("viper springcloud-config auto-refresh is inactive for zero interval", "interval", refreshInterval)
+		return nil
+	}
+
+	log.FromCtx(ctx).Info("run viper springcloud-config auto-refresh", "interval", refreshInterval)
+
+	go func() {
+		ticker := time.NewTicker(refreshInterval)
+
+		for {
+			select {
+			case <-ticker.C:
+				start := time.Now()
+
+				errRefresh := c.loadRemoteConfigForViper(context.Background())
+				if errRefresh != nil {
+					log.FromCtx(ctx).Error(errRefresh, "refresh remote config failed")
+					continue
+				}
+
+				log.FromCtx(ctx).Info("config re-loaded",
+					"elapsed_time_ms", time.Since(start).Milliseconds(),
+				)
+			case <-ctx.Done():
+				log.FromCtx(ctx).
+					Info("context.Done: stopping springcloud config auto-refresh",
+						"error", ctx.Err(),
+					)
+
+				return
+			}
+		}
+	}()
+
+	return nil
 }
 
-// LoadViperConfig parse spring cloud config values to *viper.Viper instance
-// config source will be taken from <url>/<app-name>/<profile>/<branch>.
-func (c *Client) LoadViperConfig(ctx context.Context, viper *viper.Viper) error {
+func (c *RemoteConfig) loadRemoteConfigForViper(ctx context.Context) error {
 	var appCfg appConfig
 
 	err := envconfig.Process("", &appCfg)
@@ -79,8 +122,8 @@ func (c *Client) LoadViperConfig(ctx context.Context, viper *viper.Viper) error 
 		return errors.Wrap(err, "springcloud: error parsing cloud config")
 	}
 
-	for _, url := range appCfg.confingEndpoints() {
-		err = c.applyViperFromSpringRemoteURL(ctx, viper, url)
+	for _, url := range appCfg.configEndpoints() {
+		err = c.applyViperFromSpringRemoteURL(ctx, url)
 		if err != nil {
 			return err
 		}
@@ -89,13 +132,13 @@ func (c *Client) LoadViperConfig(ctx context.Context, viper *viper.Viper) error 
 	return nil
 }
 
-func (c *Client) applyViperFromSpringRemoteURL(ctx context.Context, v *viper.Viper, url string) error {
+func (c *RemoteConfig) applyViperFromSpringRemoteURL(ctx context.Context, url string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return errors.Wrap(err, "gloudconfig: building request failed")
+		return errors.Wrap(err, "springcloud: building request failed")
 	}
 
-	resp, err := c.netClient.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "springcloud: http request failed")
 	}
@@ -113,12 +156,16 @@ func (c *Client) applyViperFromSpringRemoteURL(ctx context.Context, v *viper.Vip
 	}
 
 	if len(cfg.Propertysources) == 0 {
-		return errors.Wrapf(ErrConfigNotFound, "config url %s", url)
+		return errors.Wrapf(ErrConfigNotFound, "config_url=%s", url)
 	}
 
+	c.mu.Lock()
+
 	for key, value := range cfg.Propertysources[0].Source {
-		v.Set(key, value)
+		c.cfg.Set(key, value)
 	}
+
+	c.mu.Unlock()
 
 	return nil
 }

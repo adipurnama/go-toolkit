@@ -1,3 +1,6 @@
+springcloud-config:
+  refresh-interval: "3s"
+
 override:
   # this should be overridden
   my-value:

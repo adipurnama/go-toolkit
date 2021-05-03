@@ -7,6 +7,8 @@ import (
 	"github.com/adipurnama/go-toolkit/web"
 	echo "github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type defaultErrorResponse struct {
@@ -35,6 +37,14 @@ func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 		}
 
 		// found error & response not yet written
+
+		// check for gRPC API call returns
+		// convert it to *echo.HTTPError
+		st, ok := status.FromError(errors.Cause(err))
+		if ok {
+			code := grpcToHTTPStatusCode(st.Code())
+			err = echo.NewHTTPError(code, st.Message()).SetInternal(err)
+		}
 
 		// check for echo.NewHTTPError returned from handler / controller
 		var errEchoHTTP *echo.HTTPError
@@ -95,5 +105,44 @@ func logErrorAndResponse(l *log.Logger, msg string, err error, ctx echo.Context)
 			"path", ctx.Request().URL.Path,
 			"status_code", ctx.Response().Status,
 		)
+	}
+}
+
+// non-standard nginx response for client-cancelled operation.
+const httpStatusCancelled = 499
+
+// taken from https://github.com/cloudendpoints/esp/blob/d144b204c5fa380e8ccb0dc9ba33ea32fdef8871/src/api_manager/utils/status.cc#L289
+func grpcToHTTPStatusCode(code codes.Code) int {
+	switch code {
+	case codes.OK:
+		return http.StatusOK
+	case codes.Canceled:
+		return httpStatusCancelled
+	case codes.InvalidArgument:
+		return http.StatusBadRequest
+	case codes.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.AlreadyExists:
+		return http.StatusConflict
+	case codes.PermissionDenied:
+		return http.StatusForbidden
+	case codes.ResourceExhausted:
+		return http.StatusTooManyRequests
+	case codes.FailedPrecondition:
+		return http.StatusPreconditionFailed
+	case codes.Aborted:
+		return http.StatusPreconditionRequired
+	case codes.OutOfRange:
+		return http.StatusBadRequest
+	case codes.Unimplemented:
+		return http.StatusNotImplemented
+	case codes.Unavailable:
+		return http.StatusServiceUnavailable
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized
+	default:
+		return http.StatusInternalServerError
 	}
 }
