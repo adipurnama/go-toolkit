@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/HereMobilityDevelopers/mediary"
 	"github.com/adipurnama/go-toolkit/echokit"
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/adipurnama/go-toolkit/web/httpclient"
-	"github.com/HereMobilityDevelopers/mediary"
 	echo "github.com/labstack/echo/v4"
 )
 
