@@ -1,3 +1,4 @@
+// Package httpclient is http.Client helpers
 package httpclient
 
 import (

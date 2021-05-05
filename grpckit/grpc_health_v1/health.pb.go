@@ -21,17 +21,19 @@
 // 	protoc        v3.15.6
 // source: health.proto
 
+// Package grpc_health_v1 implements grpc healthcheck probes
 package grpc_health_v1
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (

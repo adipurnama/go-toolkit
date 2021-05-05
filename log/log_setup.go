@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/diode"
 	"github.com/rs/zerolog/log"
+
+	kitconfig "github.com/adipurnama/go-toolkit/config"
+	"github.com/pkg/errors"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -51,9 +55,7 @@ func NewDevLogger(fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields
 	output.FormatTimestamp = func(i interface{}) string {
 		return fmt.Sprintf("%s", i)
 	}
-	output.FormatErrFieldName = func(i interface{}) string {
-		return "error="
-	}
+
 	output.FormatCaller = func(i interface{}) string {
 		var sb strings.Builder
 
@@ -83,6 +85,9 @@ func NewDevLogger(fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields
 		}
 
 		return sb.String()
+	}
+	output.FormatErrFieldName = func(i interface{}) string {
+		return "error="
 	}
 
 	stdl := zerolog.New(output).With().
@@ -183,4 +188,71 @@ func Set(l *Logger) {
 func (l *Logger) Set() *Logger {
 	defaultLogger = l
 	return defaultLogger
+}
+
+// NewFromConfig returns logger based on config file
+//
+// log:
+//   level: info
+//   json-enabled: false
+//   file:
+//     enabled: true
+//     path: ./logs/promo-engine.log
+//     maxsize-mb: 10
+//     maxage-days: 7
+//     maxbackup-files: 2
+//   batch:
+//     enabled: false
+//     max-lines: 1000
+//     interval: 15ms
+//
+// then we can call using :
+// v := viper.New()
+// ... set v file configs, etc
+//
+// logger := log.NewFromConfig(v, "log")
+// ..continue using logger.
+func NewFromConfig(cfg kitconfig.KVStore, path string) (l *Logger, err error) {
+	appName := cfg.GetString("name")
+
+	logJSONFormat := cfg.GetBool(fmt.Sprintf("%s.json-enabled", path))
+	logLevel := cfg.GetString(fmt.Sprintf("%s.level", path))
+	logFilePath := cfg.GetString(fmt.Sprintf("%s.file.path", path))
+	logFileMaxSize := cfg.GetInt(fmt.Sprintf("%s.file.maxsize-mb", path))
+	logFileMaxAge := cfg.GetInt(fmt.Sprintf("%s.file.maxage-days", path))
+	logFileMaxBackups := cfg.GetInt(fmt.Sprintf("%s.file.maxbackup-files", path))
+	logFileEnabled := cfg.GetBool(fmt.Sprintf("%s.file.enabled", path))
+
+	logBatchCfg := &BatchConfig{
+		MaxLines: cfg.GetInt(fmt.Sprintf("%s.batch.max-lines", path)),
+		Enabled:  cfg.GetBool(fmt.Sprintf("%s.batch.enabled", path)),
+		Interval: cfg.GetDuration(fmt.Sprintf("%s.batch.interval", path)),
+	}
+
+	var fileLogger *lumberjack.Logger
+
+	if logFileEnabled {
+		logFile, err := os.OpenFile(filepath.Clean(logFilePath), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0600)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to open logfile %s", logFilePath)
+		}
+
+		fileLogger = &lumberjack.Logger{
+			Filename:   logFile.Name(),
+			MaxSize:    logFileMaxSize,
+			MaxAge:     logFileMaxAge,
+			MaxBackups: logFileMaxBackups,
+			LocalTime:  true,
+			Compress:   true,
+		}
+	}
+
+	if logJSONFormat {
+		// Use JSONFormatter logger for non development environment
+		l = NewLogger(GetLevelFromString(logLevel), appName, fileLogger, logBatchCfg)
+	} else {
+		l = NewDevLogger(fileLogger, logBatchCfg)
+	}
+
+	return l, nil
 }

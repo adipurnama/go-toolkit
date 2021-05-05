@@ -1,22 +1,24 @@
-package rediskit
+// Package mongokit provides helper to interact with mongodb storage
+package mongokit
 
 import (
 	"fmt"
 
+	"github.com/adipurnama/go-toolkit/config"
 	"github.com/adipurnama/go-toolkit/db"
-	goredis "github.com/go-redis/redis/v8"
-	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// NewFromViperFileConfig returns redis *redis.Client instance from yaml config file
+// NewFromConfig returns mongo *mongo.Database instance from yaml config file
 //
-// redis:
+// db:
 //   primary:
 //     username: <username>
 //     password: "<password>"
-//     host: mredis.aws.com
-//     port: 6379
-//     schema: 0
+//     host: mymongo.host.com
+//     port: 270017
+//     schema: mymongo_db
+//	   auth-db: admin
 //     conn:
 //       max-idle: 20
 //       max-lifetime: 10m
@@ -27,9 +29,9 @@ import (
 // v := viper.New()
 // ... set v file configs, etc
 //
-// db, err := log.NewFromViperFileConfig(v, "redis.primary")
+// db, err := log.NewFromConfig(v, "db.primary")
 // ...continue using db.
-func NewFromViperFileConfig(v *viper.Viper, path string) (*goredis.Client, error) {
+func NewFromConfig(v config.KVStore, path string) (*mongo.Database, error) {
 	connOpt := db.DefaultConnectionOption()
 
 	if maxIdle := v.GetInt(fmt.Sprintf("%s.conn.max-idle", path)); maxIdle > 0 {
@@ -60,5 +62,7 @@ func NewFromViperFileConfig(v *viper.Viper, path string) (*goredis.Client, error
 		return nil, err
 	}
 
-	return NewRedisConnection(opt)
+	authDB := v.GetString(fmt.Sprintf("%s.auth-db", path))
+
+	return NewMongoDBClient(opt, authDB)
 }

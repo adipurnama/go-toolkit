@@ -1,3 +1,4 @@
+// Package tracer provides apm tracing helper
 package tracer
 
 import (

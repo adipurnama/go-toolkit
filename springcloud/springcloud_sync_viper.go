@@ -9,6 +9,7 @@ import (
 )
 
 // RemoteConfig wraps thread-safe *viper.Viper key-values from springcloud remote-config.
+// it also implements `config.KVStore` interface.
 type RemoteConfig struct {
 	cfg    *viper.Viper
 	mu     *sync.Mutex
@@ -24,7 +25,12 @@ func NewRemoteConfig(client *http.Client) *RemoteConfig {
 	}
 }
 
-// ============ thread-safe *viper.Viper wrapper ============
+// Set ...
+func (c *RemoteConfig) Set(key string, value interface{}) {
+	c.mu.Lock()
+	c.cfg.Set(key, value)
+	c.mu.Unlock()
+}
 
 // IsSet ...
 func (c *RemoteConfig) IsSet(key string) bool {

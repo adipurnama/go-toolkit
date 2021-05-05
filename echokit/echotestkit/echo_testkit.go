@@ -1,3 +1,4 @@
+// Package echotestkit provides echo test helpers
 package echotestkit
 
 import (
@@ -31,9 +32,10 @@ func RequestGETWithParam(url string, urlParams map[string]string) (echo.Context,
 	ctx, rec := RequestGET(url)
 
 	if urlParams != nil {
-		var keys []string
-
-		var values []string
+		var (
+			keys   []string
+			values []string
+		)
 
 		for key, value := range urlParams {
 			keys = append(keys, key)
@@ -73,9 +75,10 @@ func RequestDELETEWithParam(url string, urlParams map[string]string) (echo.Conte
 	ctx, rec := RequestDELETE(url)
 
 	if urlParams != nil {
-		var keys []string
-
-		var values []string
+		var (
+			keys   []string
+			values []string
+		)
 
 		for key, value := range urlParams {
 			keys = append(keys, key)

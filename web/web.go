@@ -1,3 +1,4 @@
+// Package web provides abstraction to http web functionalies
 package web
 
 const (

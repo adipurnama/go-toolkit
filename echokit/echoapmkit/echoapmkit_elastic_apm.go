@@ -1,3 +1,4 @@
+// Package echoapmkit for echo & APM functionalies
 package echoapmkit
 
 import (

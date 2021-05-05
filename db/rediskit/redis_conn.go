@@ -1,3 +1,4 @@
+// Package rediskit helps to interact with redis storage backend
 package rediskit
 
 import (

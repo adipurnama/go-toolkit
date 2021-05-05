@@ -1,4 +1,4 @@
-// Package runtimekit provides utils for app-runtime
+// Package runtimekit provides runtime helpers
 package runtimekit
 
 import (
