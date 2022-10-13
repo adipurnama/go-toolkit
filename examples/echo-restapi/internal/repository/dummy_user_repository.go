@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	user "github.com/adipurnama/go-toolkit/examples/echo-restapi/internal"
 	"github.com/adipurnama/go-toolkit/tracer"
-	"github.com/pkg/errors"
 )
 
 // UserRepository is dummy user repo. In reality, YOU SHOULD PREFER USING SQLC-GGENERATED CODE.
@@ -21,7 +22,7 @@ func NewUserRepository(db *DummyDB) *UserRepository {
 
 // FindUserByID finds user by specific ID inside db.
 func (r *UserRepository) FindUserByID(ctx context.Context, id int) (*user.User, error) {
-	span := tracer.RepositoryFuncSpan(ctx)
+	ctx, span := tracer.NewSpan(ctx, tracer.SpanLvlDBQuery)
 	defer span.End()
 
 	err := r.db.QueryRowsCtx(ctx, fmt.Sprintf("select * from users where id=%d", id))
@@ -42,7 +43,7 @@ func (r *UserRepository) FindUserByID(ctx context.Context, id int) (*user.User, 
 
 // CreateUser insert new user to db.
 func (r *UserRepository) CreateUser(ctx context.Context, u *user.User) error {
-	span := tracer.RepositoryFuncSpan(ctx)
+	ctx, span := tracer.NewSpan(ctx, tracer.SpanLvlDBQuery)
 	defer span.End()
 
 	query := fmt.Sprintf("INSERT INTO users(name, email) VALUES(%s, %s) RETURNING id", u.Name, u.Email)

@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"strings"
 
+	echo "github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+
 	"github.com/adipurnama/go-toolkit/echokit"
 	"github.com/adipurnama/go-toolkit/echokit/echoapmkit"
 	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/pinpointkit"
 	"github.com/adipurnama/go-toolkit/tracer"
-	echo "github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -51,10 +53,17 @@ func main() {
 		},
 	}
 
+	agent, err := pinpointkit.NewAgent()
+	if err != nil {
+		log.FromCtx(context.Background()).Error(err, "failed call pinpoint agent")
+	}
+
+	tracer.Setup(tracer.WithPinpoint())
+
 	e := echo.New()
 	e.Use(
+		echoapmkit.RecoverMiddleware(echoapmkit.WithPinpointAgent(agent)),
 		echokit.RequestIDLoggerMiddleware(&eCfg),
-		echoapmkit.ElasticAPMMiddleware(),
 	)
 
 	e.HTTPErrorHandler = errorResponseWriter
@@ -145,7 +154,7 @@ func testLoginErrorDetailedInfo(ctx echo.Context) error {
 }
 
 func svcLogin(ctx context.Context, phone string) error {
-	span := tracer.ServiceFuncSpan(ctx)
+	_, span := tracer.NewSpan(ctx, tracer.SpanLvlServiceLogic)
 	defer span.End()
 
 	// err := errors.WithStack(errServiceUnavailable)
@@ -158,7 +167,7 @@ func svcLogin(ctx context.Context, phone string) error {
 }
 
 func svcErrFunc(ctx context.Context) error {
-	span := tracer.ServiceFuncSpan(ctx)
+	ctx, span := tracer.NewSpan(ctx, tracer.SpanLvlServiceLogic)
 	defer span.End()
 
 	err := repoErrFunc(ctx)
@@ -167,7 +176,7 @@ func svcErrFunc(ctx context.Context) error {
 }
 
 func repoErrFunc(ctx context.Context) error {
-	span := tracer.RepositoryFuncSpan(ctx)
+	_, span := tracer.NewSpan(ctx, tracer.SpanLvlServiceLogic)
 	defer span.End()
 
 	uID := 10

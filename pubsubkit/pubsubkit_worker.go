@@ -5,8 +5,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/adipurnama/go-toolkit/log"
 	"github.com/pkg/errors"
+
+	"github.com/adipurnama/go-toolkit/log"
 )
 
 type (
@@ -103,22 +104,32 @@ var (
 	ErrInvalidSubscriptionHandler = errors.New("pubsubkit: handler cannot be nil")
 )
 
-// ReceiveSubscription blocks to receive messages from pubsub subscription
-// Call with goroutine if you'd like to do something else in the meantime.
-//
-// go func() {
-//	  if err := pubsubkit.ReceiveSubscription(...); err != nil {
-//		// handle error
-//	  }
-// }()
-//
-// It will `Nack()` message when handler returns error & DLT found
-// `Ack()` when handler is success, or error with DLT not found
-// it also logs the process using `toolkit/log` package.
+/*
+ReceiveSubscription blocks to receive messages from pubsub subscription
+Call with goroutine if you'd like to do something else in the meantime.
+
+	go func() {
+		if err := pubsubkit.ReceiveSubscription(...); err != nil {
+		  // handle error
+		}
+	}()
+
+It will `Nack()` message when handler returns error & DLT found
+`Ack()` when handler is success, or error with DLT not found
+it also logs the process using `toolkit/log` package.
+*/
 func ReceiveSubscription(
 	ctx context.Context,
 	sub *pubsub.Subscription,
-	handler WorkerHandlerFunc) error {
+	handler WorkerHandlerFunc,
+	opts ...Option,
+) (err error) {
+	opt := newDefaultOptions()
+
+	for _, o := range opts {
+		o(opt)
+	}
+
 	if sub == nil {
 		return errors.WithStack(ErrInvalidSubscription)
 	}
@@ -127,12 +138,16 @@ func ReceiveSubscription(
 		return errors.WithStack(ErrInvalidSubscriptionHandler)
 	}
 
-	cfg, err := sub.Config(ctx)
-	if err != nil {
-		return errors.Wrap(err, "pubsubkit: get subscription config failed")
+	var cfg pubsub.SubscriptionConfig
+
+	if opt.checkExists {
+		cfg, err = sub.Config(ctx)
+		if err != nil {
+			return errors.Wrap(err, "pubsubkit: get subscription config failed")
+		}
 	}
 
-	log.FromCtx(ctx).Info("pubsub worker started. receiving messages...", "subscription", sub.String(), "config", cfg)
+	log.FromCtx(ctx).Info("pubsub worker started. listening messages...", "subscription", sub.String(), "config", cfg)
 
 	recErr := sub.Receive(ctx, func(wCtx context.Context, msg *pubsub.Message) {
 		logFields := []interface{}{
@@ -153,11 +168,12 @@ func ReceiveSubscription(
 		if err == nil {
 			msg.Ack()
 			log.FromCtx(ctx).Info("Message successfully processed & ACK'ed.", logFields...)
+			return
 		}
 
 		msg.Nack()
 
-		if cfg.DeadLetterPolicy == nil {
+		if opt.checkExists && cfg.DeadLetterPolicy == nil {
 			log.FromCtx(ctx).Error(err, "Processing message failed. No DLTPolicy found. Message NOT ACK'ed.", logFields...)
 			return
 		}

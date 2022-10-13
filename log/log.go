@@ -16,16 +16,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var (
-	// defaultLogger is the package default logger.
-	// It can be used right out of the box.
-	// It can be replaced by a custom configured one
-	// using package Set(*Logger) function
-	// or using *Logger.Set() method.
-	defaultLogger *Logger
-)
+// defaultLogger is the package default logger.
+// It can be used right out of the box.
+// It can be replaced by a custom configured one
+// using package Set(*Logger) function
+// or using *Logger.Set() method.
+var defaultLogger *Logger
 
 func init() {
+	stdLog.SetOutput(os.Stdout)
+
 	zerolog.ErrorStackMarshaler = marshalStack
 	zerolog.ErrorStackFieldName = "stacktrace"
 
@@ -71,22 +71,22 @@ func FromCtx(ctx context.Context) *Logger {
 }
 
 // Debug logs debug messages.
-func (l Logger) Debug(msg string, meta ...interface{}) {
+func (l *Logger) Debug(msg string, meta ...interface{}) {
 	l.debugf(msg, meta)
 }
 
 // Info logs info messages.
-func (l Logger) Info(msg string, meta ...interface{}) {
+func (l *Logger) Info(msg string, meta ...interface{}) {
 	l.infof(msg, meta)
 }
 
 // Warn logs warning messages.
-func (l Logger) Warn(msg string, meta ...interface{}) {
-	l.warnf(msg, meta)
+func (l *Logger) Warn(msg string, meta ...interface{}) {
+	l.warnf(nil, msg, meta)
 }
 
 // Error logs error messages.
-func (l Logger) Error(err error, msg string, meta ...interface{}) {
+func (l *Logger) Error(err error, msg string, meta ...interface{}) {
 	if defaultLogger.logFmt {
 		stdLog.Println("-----------------------")
 	}
@@ -98,7 +98,25 @@ func (l Logger) Error(err error, msg string, meta ...interface{}) {
 	}
 }
 
-func (l Logger) debugf(message string, fields []interface{}) {
+// WarnError used for log error but in `warn` level
+// e.g.
+//
+//	if err != nil {
+//	  log.FromCtx(ctx).WarnError(err, "something happened. continue...")
+//	}.
+func (l *Logger) WarnError(err error, msg string, meta ...interface{}) {
+	if defaultLogger.logFmt {
+		stdLog.Println("-----------------------")
+	}
+
+	l.warnf(err, msg, meta)
+
+	if defaultLogger.logFmt {
+		stdLog.Println("-----------------------")
+	}
+}
+
+func (l *Logger) debugf(message string, fields []interface{}) {
 	if l.Level > LevelDebug {
 		return
 	}
@@ -108,7 +126,7 @@ func (l Logger) debugf(message string, fields []interface{}) {
 	le.Msg(message)
 }
 
-func (l Logger) infof(message string, fields []interface{}) {
+func (l *Logger) infof(message string, fields []interface{}) {
 	if l.Level > LevelInfo {
 		return
 	}
@@ -118,17 +136,22 @@ func (l Logger) infof(message string, fields []interface{}) {
 	le.Msg(message)
 }
 
-func (l Logger) warnf(message string, fields []interface{}) {
+func (l *Logger) warnf(err error, message string, fields []interface{}) {
 	if l.Level > LevelWarn {
 		return
 	}
 
 	le := l.StdLog.Warn().Stack()
 	appendKeyValues(le, l.dynafields, fields)
+
+	if err != nil {
+		le.Err(err)
+	}
+
 	le.Msg(message)
 }
 
-func (l Logger) errorf(err error, message string, fields []interface{}) {
+func (l *Logger) errorf(err error, message string, fields []interface{}) {
 	le := l.ErrLog.Error().Stack()
 	appendKeyValues(le, l.dynafields, fields)
 	le.Err(err)
@@ -235,7 +258,7 @@ func stringify(val interface{}) string {
 }
 
 // UpdateLogLevel updates log level.
-func (l Logger) UpdateLogLevel(level Level) {
+func (l *Logger) UpdateLogLevel(level Level) {
 	// Allow info level to log the update
 	// But don't downgrade to it if Error is set.
 	current := LevelError

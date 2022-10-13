@@ -2,16 +2,18 @@
 package db
 
 import (
+	"context"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
 const (
-	defaultMaxOpen        = 100
-	defaultMaxLifetime    = 10 * time.Minute
-	defaultMaxIdle        = 5
-	defaultConnectTimeout = 10 * time.Second
+	defaultMaxOpen           = 100
+	defaultMaxLifetime       = 10 * time.Minute
+	defaultMaxIdle           = 5
+	defaultConnectTimeout    = 10 * time.Second
+	defaultKeepAliveInterval = 30 * time.Second
 )
 
 // Option - database option.
@@ -21,24 +23,27 @@ type Option struct {
 	Username     string
 	Password     string
 	DatabaseName string
+	AppContext   context.Context
 	*ConnectionOption
 }
 
 // ConnectionOption is db connection option.
 type ConnectionOption struct {
-	MaxIdle        int
-	MaxLifetime    time.Duration
-	MaxOpen        int
-	ConnectTimeout time.Duration
+	MaxIdle                int
+	MaxLifetime            time.Duration
+	MaxOpen                int
+	ConnectTimeout         time.Duration
+	KeepAliveCheckInterval time.Duration
 }
 
 // DefaultConnectionOption returns sensible conn setting.
 func DefaultConnectionOption() *ConnectionOption {
 	return &ConnectionOption{
-		MaxIdle:        defaultMaxIdle,
-		MaxOpen:        defaultMaxOpen,
-		MaxLifetime:    defaultMaxLifetime,
-		ConnectTimeout: defaultConnectTimeout,
+		MaxIdle:                defaultMaxIdle,
+		MaxOpen:                defaultMaxOpen,
+		MaxLifetime:            defaultMaxLifetime,
+		ConnectTimeout:         defaultConnectTimeout,
+		KeepAliveCheckInterval: defaultKeepAliveInterval,
 	}
 }
 
@@ -62,4 +67,44 @@ func NewDatabaseOption(host string, port int, username, password, dbName string,
 		DatabaseName:     dbName,
 		ConnectionOption: conn,
 	}, nil
+}
+
+// Options is functional param for db.Option
+type Options func(opt *Option)
+
+// WithAppContext ...
+func WithAppContext(ctx context.Context) Options {
+	return func(opt *Option) {
+		opt.AppContext = ctx
+	}
+}
+
+// WithConnectionOption ...
+func WithConnectionOption(co *ConnectionOption) Options {
+	return func(opt *Option) {
+		opt.ConnectionOption = co
+	}
+}
+
+// WithHostURLAndPort ...
+func WithHostURLAndPort(host string, port int) Options {
+	return func(opt *Option) {
+		opt.Host = host
+		opt.Port = port
+	}
+}
+
+// WithCredential ...
+func WithCredential(username, password string) Options {
+	return func(opt *Option) {
+		opt.Username = username
+		opt.Password = password
+	}
+}
+
+// WithDatabaseName ...
+func WithDatabaseName(dbName string) Options {
+	return func(opt *Option) {
+		opt.DatabaseName = dbName
+	}
 }

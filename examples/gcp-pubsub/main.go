@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	shortuuid "github.com/lithammer/shortuuid/v3"
+	"github.com/pkg/errors"
+
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/adipurnama/go-toolkit/pubsubkit"
 	"github.com/adipurnama/go-toolkit/runtimekit"
-	shortuuid "github.com/lithammer/shortuuid/v3"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -50,13 +51,13 @@ func main() {
 	log.FromCtx(appCtx).Info("connected to pubsub server")
 
 	// Setup GCP PubSub topic publisher
-	topic, err := pubsubkit.NewPubSubTopicAutocreate(client, topicID, &pubsub.TopicConfig{})
+	topic, err := pubsubkit.NewPubSubTopic(client, topicID, &pubsub.TopicConfig{}, pubsubkit.WithAutoCreate())
 	if err != nil {
 		log.FromCtx(appCtx).Error(err, "failed to create topic")
 		return
 	}
 
-	errorTopic, err := pubsubkit.NewPubSubTopicAutocreate(client, errorTopicID, &pubsub.TopicConfig{})
+	errorTopic, err := pubsubkit.NewPubSubTopic(client, errorTopicID, &pubsub.TopicConfig{}, pubsubkit.WithAutoCreate())
 	if err != nil {
 		log.FromCtx(appCtx).Error(err, "failed to create error topic")
 		return
@@ -65,7 +66,7 @@ func main() {
 	log.FromCtx(appCtx).Info("pubsub topics created")
 
 	// GCP PubSub Subscriber setup
-	sub, err := pubsubkit.NewPubSubSubscriptionAutocreate(client, subscriptionID, pubsub.SubscriptionConfig{
+	sub, err := pubsubkit.NewPubSubSubscription(client, subscriptionID, pubsub.SubscriptionConfig{
 		Topic: topic,
 		DeadLetterPolicy: &pubsub.DeadLetterPolicy{
 			// DLT should be fullyQualifiedProjectName ID, see: https://cloud.google.com/pubsub/docs/dead-letter-topics
@@ -78,19 +79,19 @@ func main() {
 			MinimumBackoff: 1 * time.Second,
 			MaximumBackoff: 3 * time.Second,
 		},
-	})
+	}, pubsubkit.WithAutoCreate())
 	if err != nil {
 		log.FromCtx(appCtx).Error(err, "failed to create topic subscriber")
 		return
 	}
 
-	errorSub, err := pubsubkit.NewPubSubSubscriptionAutocreate(client, errorSubscriptionID, pubsub.SubscriptionConfig{
+	errorSub, err := pubsubkit.NewPubSubSubscription(client, errorSubscriptionID, pubsub.SubscriptionConfig{
 		Topic: errorTopic,
 		RetryPolicy: &pubsub.RetryPolicy{
 			MinimumBackoff: 1 * time.Second,
 			MaximumBackoff: 3 * time.Second,
 		},
-	})
+	}, pubsubkit.WithAutoCreate())
 	if err != nil {
 		log.FromCtx(appCtx).Error(err, "failed to create topic subscriber")
 		return
@@ -124,7 +125,6 @@ func main() {
 }
 
 func readMessages(ctx context.Context, msg pubsubkit.Message) error {
-
 	msgID, err := strconv.Atoi(msg.ID())
 	if err != nil {
 		return errors.Wrapf(err, "subscriber: failed to parse msg_id=%s", msg.ID())

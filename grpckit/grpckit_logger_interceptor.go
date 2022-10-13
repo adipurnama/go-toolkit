@@ -3,6 +3,7 @@ package grpckit
 
 import (
 	"context"
+	"fmt"
 	"path"
 	"time"
 
@@ -39,6 +40,7 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 			"grpc.time_ms", time.Since(start).Milliseconds(),
 			"grpc.response", resp,
 			"grpc.request", req,
+			"grpc.service", service,
 		}
 
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
@@ -46,23 +48,27 @@ func LoggerInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		if err != nil {
+			msg := fmt.Sprintf("%s - gRPC request completed with error", info.FullMethod)
+
 			if clientRequestErrorCode(code) {
 				fields = append(fields, "error", err)
-				log.FromCtx(newCtx).Info("gRPC request completed with error", fields...)
+				log.FromCtx(newCtx).Info(msg, fields...)
 			} else {
-				log.FromCtx(newCtx).Error(err, "gRPC request completed with error", fields...)
+				log.FromCtx(newCtx).Error(err, msg, fields...)
 			}
 
 			return nil, err
 		}
 
+		msg := fmt.Sprintf("%s - gRPC request completed", info.FullMethod)
+
 		switch codeToLogLevel(code) {
 		case log.LevelDebug:
-			log.FromCtx(newCtx).Debug("gRPC request completed", fields...)
+			log.FromCtx(newCtx).Debug(msg, fields...)
 		case log.LevelWarn:
-			log.FromCtx(newCtx).Warn("gRPC request completed", fields...)
+			log.FromCtx(newCtx).Warn(msg, fields...)
 		default:
-			log.FromCtx(newCtx).Info("gRPC request completed", fields...)
+			log.FromCtx(newCtx).Info(msg, fields...)
 		}
 
 		return resp, nil

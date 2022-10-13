@@ -8,27 +8,33 @@ import (
 	"github.com/adipurnama/go-toolkit/db"
 )
 
-// NewFromConfig returns postgres-based *sqlx.DB instance from yaml config file
-//
-// db:
-//   primary:
-//     username: <username>
-//     password: "<password>"
-//     host: mydb.ap-southeast-1.rds.amazonaws.com
-//     port: 5432
-//     schema: my_db_schema
-//     conn:
-//       max-idle: 20
-//       max-lifetime: 10m
-//       timeout: 5m
-//       max-open: 100
-//
-// then we can call using :
-// v := viper.New()
-// ... set v file configs, etc
-//
-// db, err := log.NewFromConfig(v, "db.primary")
-// ...continue using db.
+/*
+NewFromConfig returns postgres-based *sqlx.DB instance from yaml config file
+
+	given config file contents:
+
+		db:
+	      primary:
+	        username: <username>
+	        password: "<password>"
+	        host: mydb.ap-southeast-1.rds.amazonaws.com
+	        port: 5432
+	        schema: my_db_schema
+	        conn:
+	          max-idle: 20
+	          max-lifetime: 10m
+	          timeout: 5m
+	          max-open: 100
+	          keep-alive-interval: 30s
+
+	then we can call using :
+
+		v := viper.New()
+		... set v file configs, etc
+
+		db, err := log.NewFromConfig(v, "db.primary")
+		...continue using db.
+*/
 func NewFromConfig(cfg config.KVStore, path string) (*sql.DB, error) {
 	connOpt := db.DefaultConnectionOption()
 
@@ -46,6 +52,10 @@ func NewFromConfig(cfg config.KVStore, path string) (*sql.DB, error) {
 
 	if connTimeout := cfg.GetDuration(fmt.Sprintf("%s.conn.timeout", path)); connTimeout > 0 {
 		connOpt.ConnectTimeout = connTimeout
+	}
+
+	if keepAlive := cfg.GetDuration(fmt.Sprintf("%s.conn.keep-alive-interval", path)); keepAlive > 0 {
+		connOpt.KeepAliveCheckInterval = keepAlive
 	}
 
 	opt, err := db.NewDatabaseOption(

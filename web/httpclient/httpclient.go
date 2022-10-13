@@ -1,9 +1,10 @@
-// Package httpclient is http.Client helpers
+// Package httpclient is *http.Client helpers
 package httpclient
 
 import (
 	"net/http"
 	"net/http/httputil"
+	"strings"
 	"time"
 
 	"github.com/HereMobilityDevelopers/mediary"
@@ -73,12 +74,12 @@ func LoggerMiddleware(req *http.Request, handler mediary.Handler) (*http.Respons
 
 	keyVals := []interface{}{"url", req.URL.String(), "method", req.Method}
 
-	dumpReq, err := httputil.DumpRequest(req, true)
+	dumpReq, err := httputil.DumpRequestOut(req, true)
 
 	if err != nil {
 		keyVals = append(keyVals, "req_headers", req.Header)
 	} else {
-		keyVals = append(keyVals, "req_body", dumpReq)
+		keyVals = append(keyVals, "req_body", debugDumpByte(dumpReq))
 	}
 
 	resp, err := handler(req)
@@ -87,12 +88,16 @@ func LoggerMiddleware(req *http.Request, handler mediary.Handler) (*http.Respons
 	}
 
 	if rBody, err2 := httputil.DumpResponse(resp, true); err2 == nil {
-		keyVals = append(keyVals, "resp_body", rBody)
+		keyVals = append(keyVals, "resp_body", debugDumpByte(rBody))
 	} else {
 		keyVals = append(keyVals, "resp_body", "err reading resp_body")
 	}
 
-	logger.Debug("http.Client call completed", keyVals...)
+	logger.Info("http.Client call completed", keyVals...)
 
 	return resp, err
+}
+
+func debugDumpByte(payload []byte) []string {
+	return strings.Split(string(payload), "\r\n")
 }

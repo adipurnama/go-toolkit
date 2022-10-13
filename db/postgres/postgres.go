@@ -9,17 +9,19 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/adipurnama/go-toolkit/db"
+	_ "github.com/pinpoint-apm/pinpoint-go-agent/plugin/pgsql" // use wrapped postgres driver
 	"github.com/pkg/errors"
-	"go.elastic.co/apm/module/apmsql"
-	_ "go.elastic.co/apm/module/apmsql/pq" // use wrapped postgres driver
-)
 
-const intervalKeepAlive = 5 * time.Second
+	"github.com/adipurnama/go-toolkit/db"
+)
 
 // NewPostgresDatabase - create & validate postgres connection given certain db.Option
 // the caller have the responsibility to close the *sqlx.DB when succeed.
-func NewPostgresDatabase(opt *db.Option) (*sql.DB, error) {
+func NewPostgresDatabase(opt *db.Option, opts ...db.Options) (*sql.DB, error) {
+	for _, o := range opts {
+		o(opt)
+	}
+
 	connURL := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(opt.Username, opt.Password),
@@ -30,49 +32,56 @@ func NewPostgresDatabase(opt *db.Option) (*sql.DB, error) {
 	q.Add("sslmode", "disable")
 	connURL.RawQuery = q.Encode()
 
-	db, err := apmsql.Open("postgres", connURL.String())
+	db, err := sql.Open("pq-pinpoint", connURL.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "postgres: failed to open connection")
 	}
 
-	db.SetMaxIdleConns(opt.ConnectionOption.MaxIdle)
-	db.SetConnMaxLifetime(opt.ConnectionOption.MaxLifetime)
-	db.SetMaxOpenConns(opt.ConnectionOption.MaxOpen)
+	db.SetMaxIdleConns(opt.MaxIdle)
+	db.SetConnMaxLifetime(opt.MaxLifetime)
+	db.SetMaxOpenConns(opt.MaxOpen)
 
-	ctx, cancel := context.WithTimeout(context.Background(), opt.ConnectionOption.ConnectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), opt.ConnectTimeout)
 	defer cancel()
 
 	_ = db.QueryRowContext(ctx, "SELECT 1")
 
 	log.Println("successfully connected to postgres", connURL.Host)
 
-	go doKeepAliveConnection(db, opt.DatabaseName, intervalKeepAlive)
+	if opt.AppContext != nil {
+		go doKeepAliveConnection(opt.AppContext, db, opt.DatabaseName, opt.KeepAliveCheckInterval)
+	}
 
 	return db, nil
 }
 
-func doKeepAliveConnection(db *sql.DB, dbName string, interval time.Duration) {
+func doKeepAliveConnection(ctx context.Context, db *sql.DB, dbName string, interval time.Duration) {
 	for {
-		rows, err := db.Query("SELECT 1")
-		if err != nil {
-			log.Printf("ERROR db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", err, dbName)
+		select {
+		case <-ctx.Done():
 			return
+		default:
+			rows, err := db.Query("SELECT 1")
+			if err != nil {
+				log.Printf("ERROR db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", err, dbName)
+				return
+			}
+
+			if rows.Err() != nil {
+				log.Printf("ERROR db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", rows.Err(), dbName)
+				return
+			}
+
+			if rows.Next() {
+				var i int
+
+				_ = rows.Scan(&i)
+				log.Printf("SUCCESS db.doKeepAliveConnection counter=%d db_name=%s stats=%+v\n", i, dbName, db.Stats())
+			}
+
+			_ = rows.Close()
+
+			time.Sleep(interval)
 		}
-
-		if rows.Err() != nil {
-			log.Printf("ERROR db.doKeepAliveConnection conn=postgres error=%s db_name=%s\n", rows.Err(), dbName)
-			return
-		}
-
-		if rows.Next() {
-			var i int
-
-			_ = rows.Scan(&i)
-			log.Printf("ERROR db.doKeepAliveConnection counter=%d db_name=%s stats=%v\n", i, dbName, db.Stats())
-		}
-
-		_ = rows.Close()
-
-		time.Sleep(interval)
 	}
 }

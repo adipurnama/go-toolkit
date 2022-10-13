@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
+	"os"
 	"time"
+
+	echo "github.com/labstack/echo/v4"
+	"github.com/pinpoint-apm/pinpoint-go-agent"
 
 	"github.com/adipurnama/go-toolkit/echokit"
 	"github.com/adipurnama/go-toolkit/echokit/echoapmkit"
@@ -9,7 +14,8 @@ import (
 	"github.com/adipurnama/go-toolkit/examples/echo-restapi/internal/repository"
 	"github.com/adipurnama/go-toolkit/examples/echo-restapi/internal/service"
 	"github.com/adipurnama/go-toolkit/log"
-	echo "github.com/labstack/echo/v4"
+	"github.com/adipurnama/go-toolkit/pinpointkit"
+	"github.com/adipurnama/go-toolkit/tracer"
 )
 
 // BuildInfo app build version, should be set from build phase
@@ -42,6 +48,24 @@ func main() {
 	repo := repository.NewUserRepository(&db)
 	svc := service.NewService(repo)
 
+	var pAgent pinpoint.Agent
+
+	pHost, set := os.LookupEnv("PINPOINT_HOST")
+	if set {
+		pOpts := pinpointkit.WithOptions(pinpointkit.Options{
+			AppName: appName,
+			Env:     "",
+			Host:    pHost,
+		})
+
+		pagent, err := pinpointkit.NewAgent(pOpts)
+		if err != nil {
+			log.FromCtx(context.Background()).Error(err, "failed call pinpoint agent")
+		}
+
+		pAgent = pagent
+	}
+
 	cfg := echokit.RuntimeConfig{
 		Port:                    dPort,
 		ShutdownWaitDuration:    dWaitDur,
@@ -57,8 +81,15 @@ func main() {
 
 	e := echo.New()
 	e.HTTPErrorHandler = handler.ErrorHandler
+
+	apmOpts := []echoapmkit.APMOption{}
+	if pAgent != nil {
+		apmOpts = append(apmOpts, echoapmkit.WithPinpointAgent(pAgent))
+		tracer.Setup(tracer.WithPinpoint())
+	}
+
 	e.Use(
-		echoapmkit.ElasticAPMMiddleware(),
+		echoapmkit.RecoverMiddleware(apmOpts...),
 		echokit.RequestIDLoggerMiddleware(&cfg),
 	)
 
@@ -83,6 +114,8 @@ func main() {
 	e.POST("/users", handler.CreateUser(svc))
 	e.GET("/users/:id", handler.GetUser(svc))
 	e.GET("/longsleep", handler.LongOperation)
+	e.GET("/panic", handler.PanicGuaranteed)
+	e.GET("/error/:code", handler.EmitError)
 
 	// run echo-http server
 	echokit.RunServer(e, &cfg)

@@ -24,12 +24,12 @@ const (
 
 // RuntimeConfig defines runtime configuration for grpc service with health check.
 type RuntimeConfig struct {
-	ShutdownWaitDuration time.Duration
-	RequestTimeout       time.Duration
-	Port                 int
-	Name                 string
-	EnableReflection     bool
-	HealthCheckFunc
+	ShutdownWaitDuration time.Duration `json:"shutdown_wait_duration,omitempty"`
+	RequestTimeout       time.Duration `json:"request_timeout,omitempty"`
+	Port                 int           `json:"port,omitempty"`
+	Name                 string        `json:"name,omitempty"`
+	EnableReflection     bool          `json:"enable_reflection,omitempty"`
+	HealthCheckFunc      `json:"-"`
 }
 
 func (cfg *RuntimeConfig) validate() {
@@ -75,7 +75,7 @@ func RunWithContext(appCtx context.Context, s *grpc.Server, cfg *RuntimeConfig) 
 		reflection.Register(s)
 	}
 
-	log.FromCtx(appCtx).Info("serving gRPC service", "port", cfg.Port, "grpc_app_name", cfg.Name)
+	log.FromCtx(appCtx).Info("serving gRPC service", "config", cfg)
 
 	go func() {
 		<-appCtx.Done()

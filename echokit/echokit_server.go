@@ -9,15 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adipurnama/go-toolkit/log"
-	"github.com/adipurnama/go-toolkit/runtimekit"
-	"github.com/adipurnama/go-toolkit/web"
 	validator "github.com/go-playground/validator/v10"
 	"github.com/iancoleman/strcase"
 	echo_prometheus "github.com/labstack/echo-contrib/prometheus"
 	echo "github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/runtimekit"
+	"github.com/adipurnama/go-toolkit/web"
 )
+
+var errInvalidHealthCheckFunc = errors.New("echokit_server: valid HealthCheckFunc is required")
 
 const (
 	defaultInfoPath   = "/actuator/info"
@@ -28,15 +31,15 @@ const (
 
 // RuntimeConfig defines echo REST API runtime config with healthcheck.
 type RuntimeConfig struct {
-	Port                    int
-	Name                    string
-	BuildInfo               string
-	ShutdownWaitDuration    time.Duration
-	ShutdownTimeoutDuration time.Duration
-	RequestTimeoutConfig    *TimeoutConfig
-	HealthCheckPath         string
-	InfoCheckPath           string
-	HealthCheckFunc
+	Port                    int            `json:"port,omitempty"`
+	Name                    string         `json:"name,omitempty"`
+	BuildInfo               string         `json:"build_info,omitempty"`
+	ShutdownWaitDuration    time.Duration  `json:"shutdown_wait_duration,omitempty"`
+	ShutdownTimeoutDuration time.Duration  `json:"shutdown_timeout_duration,omitempty"`
+	RequestTimeoutConfig    *TimeoutConfig `json:"request_timeout_config,omitempty"`
+	HealthCheckPath         string         `json:"health_check_path,omitempty"`
+	InfoCheckPath           string         `json:"info_check_path,omitempty"`
+	HealthCheckFunc         `json:"-"`
 }
 
 func (cfg *RuntimeConfig) validate() {
@@ -98,6 +101,11 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 	e.Use(ValidatorTranslatorMiddleware(validator), TimeoutMiddleware(cfg.RequestTimeoutConfig))
 	e.Validator = web.NewValidator(validator)
 
+	if cfg.HealthCheckFunc == nil {
+		log.FromCtx(appCtx).Error(errInvalidHealthCheckFunc, "please provide healthcheck function to runtime config")
+		return
+	}
+
 	// healthcheck
 	hs := &healthStatus{
 		serving: true,
@@ -107,20 +115,14 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 		if !hs.serving {
 			hs.Status = "OUT_OF_SERVICE"
 
-			return c.JSON(http.StatusOK, hs)
-		}
-
-		if cfg.HealthCheckFunc == nil {
-			hs.Status = "UP"
-
-			return c.JSON(http.StatusOK, hs)
+			return c.JSON(http.StatusServiceUnavailable, hs)
 		}
 
 		err := cfg.HealthCheckFunc(c.Request().Context())
 		if err != nil {
 			hs.Status = "OUT_OF_SERVICE"
 
-			return c.JSON(http.StatusOK, hs)
+			return c.JSON(http.StatusServiceUnavailable, hs)
 		}
 
 		hs.Status = "UP"
@@ -163,12 +165,23 @@ func RunServerWithContext(appCtx context.Context, e *echo.Echo, cfg *RuntimeConf
 	}()
 
 	// error fallback handler
-	e.HTTPErrorHandler = loggerHTTPErrorHandler(e.HTTPErrorHandler)
+	originalErrHandler := e.HTTPErrorHandler
+	e.HTTPErrorHandler = loggerHTTPErrorHandler(func(err error, respCtx echo.Context) {
+		var errEcho *echo.HTTPError
+
+		// for `echo.HTTPError`, let echo server directly handles it
+		// i.e. returns message & status code from it
+		if errors.As(err, &errEcho) {
+			return
+		}
+
+		originalErrHandler(err, respCtx)
+	})
 
 	PrintRoutes(e)
 
 	// start server
-	logger.Info("serving REST HTTP server", "port", cfg.Port)
+	logger.Info("serving REST HTTP server", "config", cfg)
 
 	if err := e.Start(fmt.Sprintf(":%d", cfg.Port)); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error(err, "starting http server")

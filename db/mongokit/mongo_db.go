@@ -7,8 +7,8 @@ import (
 	"net/url"
 
 	"github.com/adipurnama/go-toolkit/db"
+	pmongo "github.com/pinpoint-apm/pinpoint-go-agent/plugin/mongodriver"
 	"github.com/pkg/errors"
-	"go.elastic.co/apm/module/apmmongo"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -30,7 +30,7 @@ func NewMongoDBClient(opt *db.Option, authDB string) (*mongo.Database, error) {
 	clientOptions.SetConnectTimeout(opt.ConnectionOption.ConnectTimeout)
 	clientOptions.SetMaxConnIdleTime(opt.ConnectionOption.MaxLifetime)
 	clientOptions.SetMaxPoolSize(uint64(opt.ConnectionOption.MaxOpen))
-	clientOptions.SetMonitor(apmmongo.CommandMonitor())
+	clientOptions.SetMonitor(pmongo.NewMonitor())
 
 	client, err := mongo.NewClient(clientOptions)
 	if err != nil {

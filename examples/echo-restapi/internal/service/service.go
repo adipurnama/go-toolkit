@@ -20,7 +20,7 @@ func NewService(r *repository.UserRepository) *Service {
 
 // FindUserByID find user by specific ID.
 func (s *Service) FindUserByID(ctx context.Context, id int) (*user.User, error) {
-	span := tracer.ServiceFuncSpan(ctx)
+	ctx, span := tracer.NewSpan(ctx, tracer.SpanLvlServiceLogic)
 	defer span.End()
 
 	return s.repo.FindUserByID(ctx, id)
@@ -28,7 +28,7 @@ func (s *Service) FindUserByID(ctx context.Context, id int) (*user.User, error) 
 
 // CreateUser creates new user in the system.
 func (s *Service) CreateUser(ctx context.Context, u *user.User) error {
-	span := tracer.ServiceFuncSpan(ctx)
+	ctx, span := tracer.NewSpan(ctx, tracer.SpanLvlServiceLogic)
 	defer span.End()
 
 	err := s.repo.CreateUser(ctx, u)

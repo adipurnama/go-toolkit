@@ -6,19 +6,23 @@ import (
 	"github.com/adipurnama/go-toolkit/config"
 )
 
-// NewRuntimeConfig returns *RuntimeConfig based on viper configuration
-// with layout:
-//
-// restapi:
-//   port: 8088
-//   request-timeout: 10s
-//   healthcheck-path: /health/info
-//   info-path: /actuator/info
-//   shutdown:
-//     wait-duration: 3s
-//     timeout-duration: 5s
-//
-// call using `echokit.NewRuntimeConfig(v, "restapi")`.
+/*
+NewRuntimeConfig returns *RuntimeConfig based on viper configuration
+with layout:
+
+	given config file contents:
+
+		restapi:
+		  port: 8088
+		  request-timeout: 10s
+		  healthcheck-path: /health/info
+		  info-path: /actuator/info
+		  shutdown:
+			wait-duration: 3s
+			timeout-duration: 5s
+
+	call using `echokit.NewRuntimeConfig(v, "restapi")`.
+*/
 func NewRuntimeConfig(cfg config.KVStore, path string) *RuntimeConfig {
 	r := RuntimeConfig{}
 

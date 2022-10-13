@@ -3,6 +3,8 @@ package log
 import (
 	"fmt"
 	"io"
+	"io/fs"
+	stdLog "log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,9 +14,10 @@ import (
 	"github.com/rs/zerolog/diode"
 	"github.com/rs/zerolog/log"
 
-	kitconfig "github.com/adipurnama/go-toolkit/config"
 	"github.com/pkg/errors"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
+
+	kitconfig "github.com/adipurnama/go-toolkit/config"
 )
 
 // NewDevLogger logger.
@@ -34,7 +37,7 @@ func NewDevLogger(fileLogger *lumberjack.Logger, batchCfg *BatchConfig, stfields
 
 	if batchCfg != nil && batchCfg.Enabled {
 		writer = diode.NewWriter(writer, batchCfg.MaxLines, batchCfg.Interval, func(missed int) {
-			fmt.Printf("Logger Dropped %d messages", missed)
+			stdLog.Printf("Logger Dropped %d messages", missed)
 		})
 	}
 
@@ -141,10 +144,10 @@ func NewLogger(level Level, name string, fileLogger *lumberjack.Logger, batchCfg
 
 	if batchCfg != nil && batchCfg.Enabled {
 		stdWriter = diode.NewWriter(stdWriter, batchCfg.MaxLines, batchCfg.Interval, func(missed int) {
-			fmt.Printf("Logger Dropped %d messages", missed)
+			stdLog.Printf("Logger Dropped %d messages\n", missed)
 		})
 		errWriter = diode.NewWriter(errWriter, batchCfg.MaxLines, batchCfg.Interval, func(missed int) {
-			fmt.Printf("Logger Dropped %d messages", missed)
+			stdLog.Printf("Logger Dropped %d messages\n", missed)
 		})
 	}
 
@@ -190,28 +193,33 @@ func (l *Logger) Set() *Logger {
 	return defaultLogger
 }
 
-// NewFromConfig returns logger based on config file
-//
-// log:
-//   level: info
-//   json-enabled: false
-//   file:
-//     enabled: true
-//     path: ./logs/promo-engine.log
-//     maxsize-mb: 10
-//     maxage-days: 7
-//     maxbackup-files: 2
-//   batch:
-//     enabled: false
-//     max-lines: 1000
-//     interval: 15ms
-//
-// then we can call using :
-// v := viper.New()
-// ... set v file configs, etc
-//
-// logger := log.NewFromConfig(v, "log")
-// ..continue using logger.
+/*
+NewFromConfig returns logger based on config file
+
+	given config yaml file contents:
+
+		log:
+		  level: info
+		  json-enabled: false
+		  file:
+			enabled: true
+			path: ./logs/promo-engine.log
+			maxsize-mb: 10
+			maxage-days: 7
+			maxbackup-files: 2
+		  batch:
+			enabled: false
+			max-lines: 1000
+			interval: 15ms
+
+	then we can call using :
+
+		v := viper.New()
+		... set v file configs, etc
+
+		logger := log.NewFromConfig(v, "log")
+		..continue using logger.
+*/
 func NewFromConfig(cfg kitconfig.KVStore, path string) (l *Logger, err error) {
 	appName := cfg.GetString("name")
 
@@ -232,7 +240,9 @@ func NewFromConfig(cfg kitconfig.KVStore, path string) (l *Logger, err error) {
 	var fileLogger *lumberjack.Logger
 
 	if logFileEnabled {
-		logFile, err := os.OpenFile(filepath.Clean(logFilePath), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0600)
+		logMode := 0o600
+
+		logFile, err := os.OpenFile(filepath.Clean(logFilePath), os.O_APPEND|os.O_CREATE|os.O_RDWR, fs.FileMode(logMode))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to open logfile %s", logFilePath)
 		}

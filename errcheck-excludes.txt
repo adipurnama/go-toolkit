@@ -1,0 +1,7 @@
+io/ioutil.ReadFile
+io.Copy(*bytes.Buffer)
+io.Copy(os.Stdout)
+
+// Sometimes we don't care if a HTTP request fails.
+// (*net/http.Client).Do
+(io.Closer).Close

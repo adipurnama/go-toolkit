@@ -5,29 +5,32 @@ import (
 	"net/http"
 	"strconv"
 
+	echo "github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+
 	"github.com/adipurnama/go-toolkit/echokit"
-	"github.com/adipurnama/go-toolkit/echokit/echoapmkit"
 	user "github.com/adipurnama/go-toolkit/examples/echo-restapi/internal"
 	"github.com/adipurnama/go-toolkit/examples/echo-restapi/internal/service"
 	"github.com/adipurnama/go-toolkit/examples/echo-restapi/pkg/dto"
-	echo "github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
+	"github.com/adipurnama/go-toolkit/tracer"
 )
 
 // CreateUser for create single user based on json body.
 func CreateUser(svc *service.Service) echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		span := echoapmkit.HandlerSpan(ctx)
+	return func(c echo.Context) error {
+		ctx, span := tracer.NewSpan(c.Request().Context(), tracer.SpanLvlServiceLogic)
 		defer span.End()
+
+		c.SetRequest(c.Request().WithContext(ctx))
 
 		var req dto.CreateUserRequest
 
-		err := ctx.Bind(&req)
+		err := c.Bind(&req)
 		if err != nil {
 			return errors.Wrap(err, "parse request body failed")
 		}
 
-		if err := echokit.Validate(ctx, req); err != nil {
+		if err := echokit.Validate(c, req); err != nil {
 			return err
 		}
 
@@ -36,7 +39,7 @@ func CreateUser(svc *service.Service) echo.HandlerFunc {
 			Email: req.Email,
 		}
 
-		err = svc.CreateUser(ctx.Request().Context(), &u)
+		err = svc.CreateUser(c.Request().Context(), &u)
 		if err != nil {
 			return err
 		}
@@ -53,7 +56,7 @@ func CreateUser(svc *service.Service) echo.HandlerFunc {
 			},
 		}
 
-		return ctx.JSON(code, resp)
+		return c.JSON(code, resp)
 	}
 }
 

@@ -3,11 +3,13 @@ package echokit
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
-	"github.com/adipurnama/go-toolkit/log"
 	shortuuid "github.com/lithammer/shortuuid/v3"
+
+	"github.com/adipurnama/go-toolkit/log"
 
 	"github.com/adipurnama/go-toolkit/web"
 
@@ -140,8 +142,9 @@ func bodyDumpHandlerFunc(c echo.Context, reqBody []byte, respBody []byte) {
 	l := log.FromCtx(c.Request().Context())
 	respStr := strings.Replace(string(respBody), "}\n", "}", 1)
 	reqStr := strings.Replace(string(reqBody), "}\n", "}", 1)
+	msg := fmt.Sprintf("%s %s - http request completed", c.Request().Method, c.Request().URL.Path)
 
-	l.Debug("REST request completed",
+	l.Debug(msg,
 		"http.response", respStr,
 		"http.request", reqStr,
 		"http.status_code", c.Response().Status,
@@ -151,11 +154,11 @@ func bodyDumpHandlerFunc(c echo.Context, reqBody []byte, respBody []byte) {
 
 // TimeoutConfig request timeout configuration
 // default value:
-//  * timeout: 7 seconds
-//	* middleware.DefaultSkipper / apply to all url
+//   - timeout: 7 seconds
+//   - middleware.DefaultSkipper / apply to all url
 type TimeoutConfig struct {
-	Timeout time.Duration
-	Skipper middleware.Skipper
+	Timeout time.Duration      `json:"timeout,omitempty"`
+	Skipper middleware.Skipper `json:"-"`
 }
 
 // TimeoutMiddleware sets upstream request context's timeout.

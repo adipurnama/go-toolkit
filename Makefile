@@ -37,13 +37,13 @@ ifndef PROTOC_CMD
 endif
 	@echo -e "$(OK_COLOR)==> Generate proto objects to grpckit/$(NO_COLOR)..."
 	@protoc --proto_path=./grpckit --go_out=plugins=grpc:./ grpckit/health.proto
-	@protoc --proto_path=./example/grpc-server --go_out=plugins=grpc:./ example/grpc-server/example_service.proto
+	@protoc --proto_path=./examples/grpc-server --go_out=plugins=grpc:./ examples/grpc-server/example_service.proto
 	@echo -e "$(OK_COLOR)==> Done$(NO_COLOR)..."
 
 run-pubsub: pubsub-local
 	PUBSUB_EMULATOR_HOST=localhost:8085 go run examples/gcp-pubsub/main.go
 
-run-springconfig:
+run-springconfig-docker:
 	SPRING_CLOUD_CONFIG_URL="http://localhost:8888/" \
 	SPRING_CLOUD_CONFIG_PATHS="/go-config-app/dev/,/go-config-app/other/" \
 							go run examples/springcloud-config/main.go
@@ -60,5 +60,20 @@ apm-local:
 pubsub-local:
 	docker compose up -d googlecloud-pubsub
 
-springcloud-config-local:
+springcloud-config-docker:
 	docker compose up -d spring-config-server
+
+springcloud-config-localfile:
+	SPRING_CLOUD_CONFIG_URL=file://$(PWD)/examples/springcloud-config/data/go-config-app-dev.yml \
+	SPRING_CLOUD_CONFIG_PATHS="/" \
+							go run examples/springcloud-config/main.go
+
+run-echo-grpc:
+	SPRING_CLOUD_CONFIG_URL=file://$(PWD)/examples/springcloud-config/data/go-config-app-dev.yml \
+	SPRING_CLOUD_CONFIG_PATHS="/" \
+							go run examples/echo-grpc-sample/main.go
+
+run-echo-restapi:
+	SPRING_CLOUD_CONFIG_URL=file://$(PWD)/examples/springcloud-config/data/go-config-app-dev.yml \
+	SPRING_CLOUD_CONFIG_PATHS="/" \
+							go run examples/echo-restapi/main.go

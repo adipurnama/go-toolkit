@@ -54,6 +54,8 @@ func main() {
 	err := h.FindUserByID(validUserID)
 	log.FromCtx(ctx).Error(err, "log debug message", "field_key1", "whatever")
 
+	log.FromCtx(ctx).WarnError(err, "something happened. continue", "field_key1", "whatever")
+
 	err = h.FindUserByID(invalidUserID)
 	log.FromCtx(ctx).Error(err, "log debug message", "field_key1", "whatever")
 

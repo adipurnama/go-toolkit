@@ -1,7 +1,11 @@
 prod.env
+vendor/
 staging.env
 out/
 test_coverage.*
 .vscode/
 .idea/
+es-data/
 app.yml
+es-data/
+.DS_Store

@@ -1,14 +1,16 @@
 package echokit
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/adipurnama/go-toolkit/log"
-	"github.com/adipurnama/go-toolkit/web"
 	echo "github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/web"
 )
 
 type defaultErrorResponse struct {
@@ -19,11 +21,11 @@ type defaultErrorResponse struct {
 func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 	return func(err error, ctx echo.Context) {
 		logger := log.FromCtx(ctx.Request().Context())
-		msg := "request completed with error"
+		msg := fmt.Sprintf("%s %s - request completed with error", ctx.Request().Method, ctx.Request().URL.Path)
 
 		prevCommitted := ctx.Response().Committed
 
-		if !ctx.Response().Committed {
+		if !prevCommitted {
 			// writer may commit response
 			w(err, ctx)
 		}
@@ -56,7 +58,7 @@ func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 			errWriteResp := ctx.JSON(errEchoHTTP.Code, errEchoHTTP)
 
 			if errWriteResp != nil {
-				logger.Error(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
+				logger.WarnError(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
 			}
 
 			logErrorAndResponse(logger, msg, err, ctx)
@@ -70,7 +72,7 @@ func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 			errWriteResp := ctx.JSON(httpErr.Code, httpErr)
 
 			if errWriteResp != nil {
-				logger.Error(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
+				logger.WarnError(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
 			}
 
 			logErrorAndResponse(logger, msg, err, ctx)
@@ -86,10 +88,15 @@ func loggerHTTPErrorHandler(w echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 
 		errWriteResp := ctx.JSON(resp.Code, resp)
 		if errWriteResp != nil {
-			logger.Error(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
+			logger.WarnError(errWriteResp, "error writing JSON response", "path", ctx.Request().URL.Path)
 		}
 
-		logErrorAndResponse(logger, "request completed with unhandled error. add error type inspection in your echo.HTTPErrorHandler", err, ctx)
+		logErrorAndResponse(
+			logger,
+			"request completed with unhandled error. add error type inspection in your echo.HTTPErrorHandler",
+			err,
+			ctx,
+		)
 	}
 }
 

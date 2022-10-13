@@ -1,7 +1,9 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 package v1;
-option go_package = "example/grpc-server/v1";
+option go_package = "examples/grpc-server/v1";
 
 message HelloRequest {
     string name = 1;
@@ -14,4 +16,5 @@ message HelloResponse {
 
 service ExampleService {
     rpc Greet(HelloRequest) returns ( HelloResponse );
+    rpc Crash(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

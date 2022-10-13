@@ -4,13 +4,18 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/adipurnama/go-toolkit/examples/grpc-server/v1"
-	"github.com/adipurnama/go-toolkit/grpckit"
-	"github.com/adipurnama/go-toolkit/log"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
-	"go.elastic.co/apm/module/apmgrpc"
+	pgrpc "github.com/pinpoint-apm/pinpoint-go-agent/plugin/grpc"
 	"google.golang.org/grpc"
+
+	v1 "github.com/adipurnama/go-toolkit/examples/grpc-server/v1"
+	"github.com/adipurnama/go-toolkit/grpckit"
+	"github.com/adipurnama/go-toolkit/grpckit/grpcapmkit"
+	"github.com/adipurnama/go-toolkit/log"
+	"github.com/adipurnama/go-toolkit/pinpointkit"
+	"github.com/adipurnama/go-toolkit/springcloud"
+	"github.com/adipurnama/go-toolkit/web/httpclient"
 )
 
 const (
@@ -40,8 +45,19 @@ func main() {
 		HealthCheckFunc:      healthCheck(),
 	}
 
+	httpClient := httpclient.NewStdHTTPClient()
+	springConfig := springcloud.NewRemoteConfig(httpClient)
+
+	popt := pinpointkit.WithOptionsFromConfig(springConfig, "app.pinpoint")
+
+	pagent, err := pinpointkit.NewAgent(popt)
+	if err != nil {
+		log.FromCtx(context.Background()).Error(err, "failed call pinpoint agent")
+	}
+
 	sOpts := grpc.UnaryInterceptor(
-		grpc_middleware.ChainUnaryServer(apmgrpc.NewUnaryServerInterceptor(apmgrpc.WithRecovery()),
+		grpc_middleware.ChainUnaryServer(
+			grpcapmkit.NewUnaryServerInterceptor(grpcapmkit.WithPinpointAgent(pagent)),
 			grpckit.RequestTimeoutInterceptor(timeout),
 			grpckit.RequestIDInterceptor(grpckit.DefaultRequestIDProvider()),
 			grpckit.ErrorResponseWriterInterceptor(grpckit.DefaultGRPCErrorHandler),
@@ -49,7 +65,10 @@ func main() {
 			grpc_validator.UnaryServerInterceptor(),
 		))
 
-	s := grpc.NewServer(sOpts)
+	s := grpc.NewServer(
+		sOpts,
+		grpc.StreamInterceptor(pgrpc.StreamServerInterceptor(pagent)),
+	)
 
 	exampleSvc := &v1.Server{}
 

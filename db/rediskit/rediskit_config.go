@@ -3,32 +3,38 @@ package rediskit
 import (
 	"fmt"
 
+	goredis "github.com/go-redis/redis/v8"
+
 	"github.com/adipurnama/go-toolkit/config"
 	"github.com/adipurnama/go-toolkit/db"
-	goredis "github.com/go-redis/redis/v8"
 )
 
-// NewFromConfig returns redis *redis.Client instance from yaml config file
-//
-// redis:
-//   primary:
-//     username: <username>
-//     password: "<password>"
-//     host: mredis.aws.com
-//     port: 6379
-//     schema: 0
-//     conn:
-//       max-idle: 20
-//       max-lifetime: 10m
-//       timeout: 5m
-//       max-open: 100
-//
-// then we can call using :
-// v := viper.New()
-// ... set v file configs, etc
-//
-// db, err := log.NewFromConfig(v, "redis.primary")
-// ...continue using db.
+/*
+NewFromConfig returns redis *redis.Client instance from yaml config file
+
+	given config file contents:
+
+		redis:
+		  primary:
+			username: <username>
+			password: "<password>"
+			host: mredis.aws.com
+			port: 6379
+			schema: 0
+			conn:
+			  max-idle: 20
+			  max-lifetime: 10m
+			  timeout: 5m
+			  max-open: 100
+
+	then we can call using :
+
+		v := viper.New()
+		... set v file configs, etc
+
+		db, err := log.NewFromConfig(v, "redis.primary")
+		...continue using db.
+*/
 func NewFromConfig(cfg config.KVStore, path string) (*goredis.Client, error) {
 	connOpt := db.DefaultConnectionOption()
 

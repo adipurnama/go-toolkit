@@ -4,33 +4,39 @@ package mongokit
 import (
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/adipurnama/go-toolkit/config"
 	"github.com/adipurnama/go-toolkit/db"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// NewFromConfig returns mongo *mongo.Database instance from yaml config file
-//
-// db:
-//   primary:
-//     username: <username>
-//     password: "<password>"
-//     host: mymongo.host.com
-//     port: 270017
-//     schema: mymongo_db
-//	   auth-db: admin
-//     conn:
-//       max-idle: 20
-//       max-lifetime: 10m
-//       timeout: 5m
-//       max-open: 100
-//
-// then we can call using :
-// v := viper.New()
-// ... set v file configs, etc
-//
-// db, err := log.NewFromConfig(v, "db.primary")
-// ...continue using db.
+/*
+NewFromConfig returns mongo *mongo.Database instance from yaml config file
+
+	given config file contents:
+
+		db:
+		  primary:
+		    username: <username>
+		    password: "<password>"
+		    host: mymongo.host.com
+		    port: 270017
+		    schema: mymongo_db
+		    auth-db: admin
+		    conn:
+			  max-idle: 20
+			  max-lifetime: 10m
+			  timeout: 5m
+			  max-open: 100
+
+	 then we can call using :
+
+		 v := viper.New()
+		 ... set v file configs, etc
+
+		 db, err := log.NewFromConfig(v, "db.primary")
+		 ...continue using db.
+*/
 func NewFromConfig(v config.KVStore, path string) (*mongo.Database, error) {
 	connOpt := db.DefaultConnectionOption()
 

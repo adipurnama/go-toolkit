@@ -9,8 +9,8 @@ import (
 
 	"github.com/adipurnama/go-toolkit/db"
 	goredis "github.com/go-redis/redis/v8"
+	predis "github.com/pinpoint-apm/pinpoint-go-agent/plugin/goredisv8"
 	"github.com/pkg/errors"
-	apmgoredis "go.elastic.co/apm/module/apmgoredisv8"
 )
 
 // NewRedisConnection returns new redis client
@@ -32,7 +32,7 @@ func NewRedisConnection(option *db.Option) (*goredis.Client, error) {
 	}
 
 	rClient := goredis.NewClient(&opts)
-	rClient.AddHook(apmgoredis.NewHook())
+	rClient.AddHook(predis.NewHook(&opts))
 
 	_, err = rClient.Ping(context.Background()).Result()
 	if err != nil {

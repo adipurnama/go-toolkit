@@ -1,6 +1,8 @@
 package log
 
-import "strings"
+import (
+	"strings"
+)
 
 // Level is log output level.
 type Level int
@@ -21,9 +23,7 @@ const (
 	cfgDefaultStdLogSkipCallerCount = 2
 )
 
-var (
-	loggerCtxKey contextKey = contextKey{name: "internal-ctx-log"}
-)
+var loggerCtxKey = contextKey{name: "internal-ctx-log"}
 
 func levelString(l Level) string {
 	switch l {

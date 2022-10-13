@@ -1,73 +1,85 @@
 linters:
   enable:
-    - asciicheck
-    - bodyclose
-    - deadcode
+    - goerr113
     - errcheck
     - errorlint
-    - exportloopref
-    - gocognit
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - goerr113
+    - asciicheck
+    - ineffassign
     - gofmt
     - goimports
-    - gomnd
-    - goprintffuncname
-    - gosec
+    - gofumpt
+    - goconst
+    - gocritic
+    - bodyclose
     - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - nakedret
     - noctx
-    - prealloc
-    - rowserrcheck
-    - stylecheck
-    - revive
-    - testpackage
-    - unconvert
     - unparam
+    - goprintffuncname
+    - unused
+    - unconvert
     - vet
-    # - wrapcheck
+    - nakedret
+    - exportloopref
+    - misspell
+    # https://github.com/golangci/golangci-lint/issues/2649
+    # - rowserrcheck
+    - testpackage
+    - govet
+    - stylecheck
     - wsl
+    - nilerr
+    - revive
+    - prealloc
+  disable:
+    - gocognit
+    - gocyclo
+    - godot
+    - gomnd
+    - gosec
 linters-settings:
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+    exclude: errcheck-excludes.txt
   revive:
-    # Installation: go get -u github.com/mgechev/revive
     # see https://github.com/mgechev/revive#available-rules for details.
     ignore-generated-header: true
     severity: warning
     rules:
-      - name: atomic
-      - name: bare-return
+      - name: indent-error-flow
+        severity: warning
       - name: blank-imports
       - name: context-as-argument
       - name: context-keys-type
       - name: dot-imports
-      - name: early-return
       - name: error-return
       - name: error-strings
       - name: error-naming
-      - name: errorf
       - name: exported
       - name: if-return
-      - name: imports-blacklist
       - name: increment-decrement
       - name: var-naming
       - name: var-declaration
-      - name: package-comments
       - name: range
       - name: receiver-naming
       - name: time-naming
-      - name: unconditional-recursion
       - name: unexported-return
-      - name: indent-error-flow
       - name: errorf
       - name: empty-block
       - name: superfluous-else
-      - name: unexported-return
       - name: unused-parameter
       - name: unreachable-code
       - name: redefines-builtin-id
+      - name: package-comments
+      # - name: add-constant
+      #   severity: warning
+      #   arguments:
+      #     - maxLitCount: "3"
+      #       allowStrs: '""'
+      #       allowInts: "0,1,2"
+      #       allowFloats: "0.0,0.,1.0,1.,2.0,2."
+  issues:
+    fix: true
+run:
+  skip-files:
+    - echokit/echoapmkit/echoapmkit_recover_middleware.go

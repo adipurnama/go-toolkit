@@ -15,7 +15,8 @@ import (
 
 // test run using 'make run-springconfig' command
 // make sure localhost spring cloud config is already running.
-//  `docker compose up -d spring-cloud-config`
+//
+//	`docker compose up -d spring-cloud-config`
 func main() {
 	appCtx, cancel := runtimekit.NewRuntimeContext()
 	defer cancel()

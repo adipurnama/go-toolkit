@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
+	"encoding/json"
 	"net/http"
 
 	"github.com/HereMobilityDevelopers/mediary"
@@ -10,6 +10,7 @@ import (
 	"github.com/adipurnama/go-toolkit/log"
 	"github.com/adipurnama/go-toolkit/web/httpclient"
 	echo "github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -39,63 +40,133 @@ func main() {
 		WithPreconfiguredClient(c).
 		Build()
 
-	req, _ := http.NewRequestWithContext(
+	ctxClient := httpclient.NewContextHTTPClient(c)
+	hClient := dummyAPIClient{client: ctxClient}
+
+	respJSON, httpResp, err := hClient.GetDummy(ctx)
+	if err != nil {
+		if httpResp != nil {
+			log.FromCtx(ctx).Error(err, "got error with response", "status", httpResp.StatusCode)
+		} else {
+			log.FromCtx(ctx).Error(err, "got error without response")
+		}
+	} else {
+		log.FromCtx(ctx).Info("got response", "resp", respJSON)
+	}
+
+	// try to parse resp.Body for the second time
+	// should be failed because resp.Body is already closed
+	// but we can still get the http statusCode and other info
+	var errResp errResponse
+
+	err = json.NewDecoder(httpResp.Body).Decode(&errResp)
+	if err != nil {
+		err = errors.Wrap(err, "error reading response")
+		log.FromCtx(ctx).Error(err, "error parsing second json", "status", httpResp.StatusCode)
+	} else {
+		log.FromCtx(ctx).Info("got response on second parsing", "resp", respJSON)
+	}
+}
+
+// ================ Server Handler =============================
+
+func dummy(ctx echo.Context) error {
+	return ctx.JSON(http.StatusOK, errResponse{
+		Status: "OK",
+		Code:   http.StatusOK,
+	})
+}
+
+type errResponse struct {
+	Status    string `json:"status"`
+	Code      int    `json:"code"`
+	Exception string `json:"exception"`
+	Message   string `json:"message"`
+}
+
+func badRequest(_ echo.Context) error {
+	return echo.NewHTTPError(http.StatusBadRequest, errResponse{
+		Status:    "Bad Request",
+		Code:      http.StatusBadRequest,
+		Exception: "bad request is happening",
+		Message:   "something bad",
+	})
+}
+
+func badGateway(_ echo.Context) error {
+	return echo.NewHTTPError(http.StatusBadGateway, errResponse{
+		Status:    "Bad Gateway",
+		Code:      http.StatusBadGateway,
+		Exception: "bad gateway is happening",
+		Message:   "gateway service error",
+	})
+}
+
+// =========== API Client =======================
+
+type dummyAPIClient struct {
+	client *httpclient.ContextHTTPClient
+}
+
+func (c *dummyAPIClient) GetBadRequest(ctx context.Context) (*errResponse, *http.Response, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"http://localhost:8081/bad-request",
+		nil,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var errResp errResponse
+
+	resp, err := c.client.Do(ctx, req, &errResp)
+	if err != nil {
+		return nil, resp, errors.Wrap(err, "failed getting response")
+	}
+
+	return &errResp, resp, nil
+}
+
+func (c *dummyAPIClient) GetBadGateway(ctx context.Context) (*errResponse, *http.Response, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"http://localhost:8081/bad-gateway",
+		nil,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var errResp errResponse
+
+	resp, err := c.client.Do(ctx, req, &errResp)
+	if err != nil {
+		return nil, resp, errors.Wrap(err, "failed getting response")
+	}
+
+	return &errResp, resp, nil
+}
+
+func (c *dummyAPIClient) GetDummy(ctx context.Context) (*errResponse, *http.Response, error) {
+	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
 		"http://localhost:8081/dummy",
 		nil,
 	)
-
-	resp, err := c.Do(req)
 	if err != nil {
-		log.FromCtx(ctx).Error(err, "error getting response")
-		return
+		return nil, nil, err
 	}
 
-	resp2, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.FromCtx(ctx).Error(err, "error reading response")
+	var errResp errResponse
 
-		return
+	resp, err := c.client.Do(ctx, req, &errResp)
+	if err != nil {
+		return nil, resp, errors.Wrap(err, "failed getting response")
 	}
 
-	log.FromCtx(ctx).Info("got response", "json_response", resp2)
-
-	resp.Body.Close()
-
-	req = req.Clone(ctx)
-	req.URL.Path = "/bad-request"
-
-	resp, err = c.Do(req)
-	if err != nil {
-		log.FromCtx(ctx).Error(err, "second request")
-
-		return
-	}
-
-	resp.Body.Close()
-
-	req = req.Clone(ctx)
-	req.URL.Path = "/bad-gateway"
-
-	resp, err = c.Do(req)
-	if err != nil {
-		log.FromCtx(ctx).Error(err, "third request")
-
-		return
-	}
-
-	resp.Body.Close()
-}
-
-func dummy(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, `{"status": "OK"}`)
-}
-
-func badRequest(_ echo.Context) error {
-	return echo.NewHTTPError(http.StatusBadRequest, "bad request")
-}
-
-func badGateway(_ echo.Context) error {
-	return echo.NewHTTPError(http.StatusBadGateway, "bad gateway")
+	return &errResp, resp, nil
 }

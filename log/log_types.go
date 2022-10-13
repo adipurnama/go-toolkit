@@ -7,9 +7,7 @@ import (
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
-var (
-	cfg config
-)
+var cfg config
 
 // Logger is structured leveled logger.
 type Logger struct {
